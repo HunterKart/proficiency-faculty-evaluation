@@ -1,0 +1,35 @@
+# ==== Runtime (unpinned) ====
+fastapi
+uvicorn[standard]
+pydantic
+pydantic-settings
+python-dotenv
+PyJWT
+passlib[bcrypt]
+pyotp
+SQLAlchemy
+alembic
+PyMySQL
+redis
+rq
+pandas
+openpyxl
+WeasyPrint
+email-validator
+transformers
+torch
+keybert
+sentence-transformers
+scikit-learn
+sentencepiece
+wordcloud
+Pillow
+numpy
+
+
+# ==== Lean Testing Stack (unpinned) ====
+pytest
+pytest-cov
+selenium
+fakeredis
+pypdf
