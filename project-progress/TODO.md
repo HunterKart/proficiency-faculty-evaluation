@@ -1,0 +1,1 @@
+- [ ] TASK-2025-09-26-01 | wire CI for tests (pytest + e2e selenium) | owner? | source: PROJECT_STRUCTURE.md | created: 2025-09-26
