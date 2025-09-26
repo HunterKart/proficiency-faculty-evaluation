@@ -9,6 +9,7 @@ This is the complete, **no-overengineering** stack required to deliver the syste
 -   **React + TypeScript** — Core UI framework with type safety.
 -   **Vite** — Fast dev server and build tool.
 -   **Tailwind CSS** — Utility-first styling for consistent, rapid UI work.
+-   **shadcn/ui (Radix UI + Tailwind primitives)** — Accessible component library scaffolding for consistent layouts and form controls.
 -   **React Router** — Client-side routing for role-based areas (Student, Faculty, Dept Head, Admin, Super Admin).
 -   **React Hook Form + Zod** — Forms + schema validation (Likert ranges, 5–300 word limits, time checks on submit).
 -   **TanStack Query** — Data fetching, caching, and **polling** for notifications & dashboard refresh.
@@ -122,6 +123,7 @@ This is the complete, **no-overengineering** stack required to deliver the syste
 **Frontend**
 
 -   `react` `react-dom` `typescript` `vite` `tailwindcss` `postcss` `autoprefixer`
+-   `shadcn-ui` scaffolding (`@radix-ui/*` primitives, `class-variance-authority`, `clsx`, `tailwind-merge`, `lucide-react`)
 -   `react-router-dom` `@tanstack/react-query` `react-hook-form` `zod` `@hookform/resolvers`
 -   `recharts` `echarts echarts-wordcloud`
 
