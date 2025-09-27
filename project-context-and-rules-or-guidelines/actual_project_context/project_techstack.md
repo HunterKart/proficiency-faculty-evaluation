@@ -125,7 +125,7 @@ This is the complete, **no-overengineering** stack required to deliver the syste
 -   `react` `react-dom` `typescript` `vite` `tailwindcss` `postcss` `autoprefixer`
 -   `shadcn-ui` scaffolding (`@radix-ui/*` primitives, `class-variance-authority`, `clsx`, `tailwind-merge`, `lucide-react`)
 -   `react-router-dom` `@tanstack/react-query` `react-hook-form` `zod` `@hookform/resolvers`
--   `recharts` `echarts echarts-wordcloud`
+-   `echarts echarts-wordcloud`
 
 **Backend**
 
