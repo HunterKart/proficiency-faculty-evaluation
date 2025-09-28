@@ -6,17 +6,17 @@
 
 #### **Goals**
 
--   [cite_start]**Develop "Proficiency," a multi-tenant SaaS web platform** to modernize the faculty evaluation process for educational institutions, starting with the University of Cebu - Lapu-Lapu and Mandaue[cite: 57, 78].
--   [cite_start]**Implement an AI-powered analysis engine** that automatically processes qualitative feedback from students and department heads to provide sentiment analysis, keyword extraction, and generate actionable, data-driven suggestions for improvement[cite: 49, 57].
--   [cite_start]**Ensure high data quality and evaluation integrity** through automated, server-side checks that flag low-effort submissions and detect recycled content[cite: 94, 3377, 3385].
--   [cite_start]**Provide highly dynamic and customizable evaluation forms** that allow administrators to tailor evaluation criteria, questions, and scoring to diverse and changing institutional needs[cite: 50, 82].
--   [cite_start]**Deliver intuitive, role-based dashboards and visualizations** to make evaluation results easy to interpret for faculty, department heads, and administrators, supporting continuous faculty development and institutional decision-making[cite: 50, 336].
+-   [cite_start]**Develop "Proficiency," a multi-tenant SaaS web platform** to modernize the faculty evaluation process for educational institutions, starting with the University of Cebu - Lapu-Lapu and Mandaue. [cite: 57, 78, 492]
+-   [cite_start]**Implement an AI-powered analysis engine** that automatically processes qualitative feedback from students and department heads to provide sentiment analysis, keyword extraction, and generate actionable, data-driven suggestions for improvement. [cite: 49, 57, 492]
+-   [cite_start]**Ensure high data quality and evaluation integrity** through automated, server-side checks that flag low-effort submissions and detect recycled content. [cite: 492, 3377, 3385]
+-   [cite_start]**Provide highly dynamic and customizable evaluation forms** that allow administrators to tailor evaluation criteria, questions, and scoring to diverse and changing institutional needs. [cite: 50, 82, 493]
+-   [cite_start]**Deliver intuitive, role-based dashboards and visualizations** to make evaluation results easy to interpret for faculty, department heads, and administrators, supporting continuous faculty development and institutional decision-making. [cite: 50, 336, 493]
 
 #### **Background Context**
 
-[cite_start]Existing faculty evaluation systems, particularly within the Philippines and at the target institution, suffer from significant limitations[cite: 18, 22]. [cite_start]These systems often rely on static forms that cannot adapt to changing criteria and over-emphasize quantitative Likert scores while failing to extract meaningful insights from valuable open-ended feedback[cite: 13, 20]. [cite_start]The analysis of this textual feedback is often a manual, time-consuming, and error-prone process, resulting in low-quality, unactionable results that do little to support genuine faculty growth[cite: 24].
+[cite_start]Existing faculty evaluation systems, particularly within the Philippines and at the target institution, suffer from significant limitations. [cite: 18, 22] [cite_start]These systems often rely on static forms that cannot adapt to changing criteria and over-emphasize quantitative Likert scores while failing to extract meaningful insights from valuable open-ended feedback. [cite: 13, 20] [cite_start]The analysis of this textual feedback is often a manual, time-consuming, and error-prone process, resulting in low-quality, unactionable results that do little to support genuine faculty growth. [cite: 24]
 
-"Proficiency" is designed to address these critical gaps. [cite_start]It is a modern SaaS platform that leverages an AI pipeline to automate the deep analysis of textual feedback, providing insights into sentiment and key themes[cite: 49]. [cite_start]By combining this with robust integrity checks, customizable forms, and role-based data visualization, Proficiency aims to transform faculty evaluation from a burdensome administrative task into a powerful tool for continuous professional development and educational excellence[cite: 53].
+"Proficiency" is designed to address these critical gaps. [cite_start]It is a modern SaaS platform that leverages an AI pipeline to automate the deep analysis of textual feedback, providing insights into sentiment and key themes. [cite: 49] [cite_start]By combining this with robust integrity checks, customizable forms, and role-based data visualization, Proficiency aims to transform faculty evaluation from a burdensome administrative task into a powerful tool for continuous professional development and educational excellence. [cite: 53]
 
 #### **Change Log**
 
@@ -32,46 +32,46 @@
 #### **Functional Requirements**
 
 -   **FR1: User and University Management**
-    -   [cite_start]The system shall support five user roles: **Students, Faculty, Department Heads, Admins, and Super Admins**[cite: 108, 110].
-    -   [cite_start]For V1, user creation will be limited to two methods: 1) **Admin/Super Admin bulk import** via CSV/Excel and 2) **Self-registration using a valid, university-provided invitation token**[cite: 112, 2686]. The "evidence-based" manual sign-up is deferred to a post-V1 release.
-    -   [cite_start]**Super Admins** shall manage the university registration and approval lifecycle[cite: 364, 808].
+    -   [cite_start]The system shall support five user roles: **Students, Faculty, Department Heads, Admins, and Super Admins**. [cite: 108, 110]
+    -   [cite_start]For V1, user creation will be limited to two methods: 1) **Admin/Super Admin bulk import** via CSV/Excel and 2) **Self-registration using a valid, university-provided invitation token**. [cite: 112, 2686] The "evidence-based" manual sign-up is deferred to a post-V1 release.
+    -   [cite_start]**Super Admins** shall manage the university registration and approval lifecycle. [cite: 364, 808]
 -   **FR2: Dynamic Evaluation Form & Period Management**
-    -   [cite_start]Admins shall have the ability to **create, modify, and manage dynamic evaluation form templates**[cite: 83, 1118].
-    -   [cite_start]Admins shall **assign form templates to specific evaluation periods**, defined by school year, semester (1st, 2nd, Summer), and assessment period (Midterm, Finals)[cite: 1141].
+    -   [cite_start]Admins shall have the ability to **create, modify, and manage dynamic evaluation form templates**. [cite: 83, 1118]
+    -   [cite_start]Admins shall **assign form templates to specific evaluation periods**, defined by school year, semester (1st, 2nd, Summer), and assessment period (Midterm, Finals). [cite: 1141]
     -   The system shall enforce a business rule preventing the assignment of a new evaluation form template once an evaluation period is already ongoing.
 -   **FR3: Evaluation Submission & Integrity**
-    -   [cite_start]The system must implement a **"Pre-Submission Nudge,"** a non-blocking UI message to encourage users with low-variance Likert scores to provide written examples[cite: 4857].
-    -   [cite_start]A submission must be automatically flagged with **"Low-Confidence"** if it contains both low-variance Likert scores AND short or empty open-ended answers[cite: 4858].
-    -   [cite_start]The system shall run an asynchronous job to detect and flag **"Recycled Content"** that has over 95% similarity to previous submissions[cite: 4866, 4867].
+    -   [cite_start]The system must implement a **"Pre-Submission Nudge,"** a non-blocking UI message to encourage users with low-variance Likert scores to provide written examples. [cite: 19]
+    -   [cite_start]A submission must be automatically flagged with **"Low-Confidence"** if it contains both low-variance Likert scores AND short or empty open-ended answers. [cite: 20]
+    -   [cite_start]The system shall run an asynchronous job to detect and flag **"Recycled Content"** that has over 95% similarity to previous submissions. [cite: 28, 29]
 -   **FR4: Flagged Evaluation Workflow**
-    -   [cite_start]The system must automatically flag evaluations for data inconsistencies, such as a **sentiment-coherence mismatch**[cite: 94].
-    -   [cite_start]Admins shall have a dedicated interface to review all flagged evaluations[cite: 318, 1324].
+    -   [cite_start]The system must automatically flag evaluations for data inconsistencies, such as a **sentiment-coherence mismatch**. [cite: 94]
+    -   [cite_start]Admins shall have a dedicated interface to review all flagged evaluations. [cite: 318, 1324]
     -   Admins must be able to resolve a flagged evaluation by choosing one of three actions: **Approve**, **Reject**, or **Request Resubmission**.
     -   **FR4.1:** The notification sent to a Student for a rejected evaluation **must be anonymous** and clearly state the reason for rejection to guide them in providing a better resubmission.
     -   **FR4.2:** The Admin's review dashboard for flagged evaluations must provide a **side-by-side comparison** of the submission's numerical ratings and its open-ended text.
 -   **FR5: Data Analysis Pipeline**
-    -   [cite_start]All evaluation submissions shall be processed asynchronously via a **job queue (Redis+RQ)**[cite: 4865].
-    -   [cite_start]The pipeline must separate analysis into a **Quantitative Layer** and a **Qualitative Layer**[cite: 4875].
-    -   [cite_start]A final layer shall perform **Normalization and Aggregation** to combine scores and prepare data for visualization[cite: 269].
+    -   [cite_start]All evaluation submissions shall be processed asynchronously via a **job queue (Redis+RQ)**. [cite: 27]
+    -   [cite_start]The pipeline must separate analysis into a **Quantitative Layer** and a **Qualitative Layer**. [cite: 41]
+    -   [cite_start]A final layer shall perform **Normalization and Aggregation** to combine scores and prepare data for visualization. [cite: 269]
     -   **FR5.1:** Evaluation submissions with a status of 'rejected' or 'pending review' **must be excluded** from all aggregate calculations.
 -   **FR6: AI-Powered Analysis and Insights**
-    -   [cite_start]The system must perform automated **sentiment analysis** (Primary Model: XLM-ROBERTa) and **keyword extraction** (KeyBERT)[cite: 49, 96, 186].
-    -   [cite_start]A dedicated **"AI Assistant" page** shall be available to Faculty and Department Heads to generate reports and suggestions from processed data using the Flan-T5 model[cite: 4883, 4885, 4886, 4887, 4888, 4889].
+    -   [cite_start]The system must perform automated **sentiment analysis** (Primary Model: XLM-ROBERTa) and **keyword extraction** (KeyBERT). [cite: 49, 96, 186]
+    -   [cite_start]A dedicated **"AI Assistant" page** shall be available to Faculty and Department Heads to generate reports and suggestions from processed data using the Flan-T5 model. [cite: 45, 52, 53]
 -   **FR7: Dashboards and Visualizations**
-    -   The system shall present data using specific visualizations: **Word Clouds, Bar Charts, and Performance Trend Line Charts**. [cite_start]Admins will also have access to an **Evaluation Submission Behavior Line Chart**[cite: 91].
-    -   [cite_start]Department Heads and Admins must be able to switch between different data views or **"modes"** (e.g., department-wide, specific faculty results)[cite: 1019, 1056].
+    -   The system shall present data using specific visualizations: **Word Clouds, Bar Charts, and Performance Trend Line Charts**. [cite_start]Admins will also have access to an **Evaluation Submission Behavior Line Chart**. [cite: 91]
+    -   [cite_start]Department Heads and Admins must be able to switch between different data views or **"modes"** (e.g., department-wide, specific faculty results). [cite: 1019, 1056]
 -   **FR8: Provisional and Finalized Reporting Workflow**
     -   All reports for an active review period shall be marked as **"Provisional."**
     -   When an Admin approves a flagged evaluation, an asynchronous job must **recalculate the provisional aggregates** for the affected parties.
-    -   [cite_start]Admins shall have a function to **"Finalize and Lock Period,"** which runs a final aggregation and sets the `is_final_snapshot` flag to `true`[cite: 2882, 2913].
+    -   [cite_start]Admins shall have a function to **"Finalize and Lock Period,"** which runs a final aggregation and sets the `is_final_snapshot` flag to `true`. [cite: 2882, 2913]
 
 #### **Non-Functional Requirements**
 
--   [cite_start]**NFR1: Architecture:** The system shall be a multi-tenant SaaS web platform with a modular, scalable, and asynchronous architecture[cite: 49, 127, 4865].
--   [cite_start]**NFR2: Data Integrity and Scoring:** The overall evaluation score must be calculated using a weighted scheme: 60% from Likert-scale data and 40% from textual feedback analysis[cite: 90].
--   [cite_start]**NFR3: Performance:** Access to AI-generated suggestions shall be restricted to Faculty and Department Heads to manage performance[cite: 103, 104, 105].
--   [cite_start]**NFR4: Security:** The system must implement robust user registration and authentication protocols[cite: 108].
--   **NFR5: Extensibility and Research:** The V1 production system will exclusively use the fine-tuned XLM-ROBERTa model. [cite_start]For academic comparison, a separate, non-production script or environment will be created to benchmark baseline models (VADER, Naïve Bayes, mBERT)[cite: 97, 98].
+-   [cite_start]**NFR1: Architecture:** The system shall be a multi-tenant SaaS web platform with a modular, scalable, and asynchronous architecture. [cite: 49, 127, 27]
+-   [cite_start]**NFR2: Data Integrity and Scoring:** The overall evaluation score must be calculated using a weighted scheme: 60% from Likert-scale data and 40% from textual feedback analysis. [cite: 90]
+-   [cite_start]**NFR3: Performance:** Access to AI-generated suggestions shall be restricted to Faculty and Department Heads to manage performance. [cite: 103, 104, 105]
+-   [cite_start]**NFR4: Security:** The system must implement robust user registration and authentication protocols. [cite: 108]
+-   **NFR5: Extensibility and Research:** The V1 production system will exclusively use the fine-tuned XLM-ROBERTa model. [cite_start]For academic comparison, a separate, non-production script or environment will be created to benchmark baseline models (VADER, Naïve Bayes, mBERT). [cite: 97, 98]
 -   **NFR6: System Calibration:** The automated flagging algorithms must be calibrated to minimize false positives and ensure the volume of flagged evaluations is manageable for Admins.
 
 ---
@@ -86,8 +86,8 @@ The user experience will embody **Modern, Data-Centric Professionalism**. The in
 
 -   **Students:** Login, Dashboard (view teachers to evaluate), Evaluation History, Profile Management.
 -   **Faculty:** Login, Dashboard (view personal results), Evaluation Insights, Performance Trends, Report Generation, AI Suggestion Page, Profile Management.
--   **Department Heads:** All Faculty views, plus department-level result views and the ability to evaluate faculty.
--   **Admins:** Similar views as Department Heads (institutional, department, and faculty level), but with no AI Suggestion Page. Plus: Review Flagged Evaluations, Form & Period Management, and Academic Structure Management.
+-   **Department Heads:** All Faculty views, plus department-level result views, the ability to evaluate faculty, and Evaluation History (for their own submissions).
+-   **Admins:** Similar views as Department Heads (institutional, department, and faculty level), but with no AI Suggestion Page. Plus: Review Flagged Evaluations, Form & Period Management, Academic Structure Management, and User Management (Bulk Import).
 -   **Super Admins:** Login, Dashboard (platform metrics), University Management, User Management, Profile Management.
 
 #### **Key Interaction Paradigms**
@@ -193,22 +193,22 @@ The architecture will be a **simple monolith** consisting of a single FastAPI ba
 
 **Story 1.6a: Bulk Import Validation & Feedback**
 
--   **As a** Super Admin, **I want** to upload a user CSV file and receive clear validation feedback, **so that** I know if my file is correctly formatted before processing.
+-   **As an** Admin or Super Admin, **I want** to upload a user CSV file and receive clear validation feedback, **so that** I know if my file is correctly formatted before processing.
 -   **Acceptance Criteria:**
-    1.  The Super Admin dashboard has an interface for uploading a user data file for a specific university.
+    1.  The **Admin dashboard** and the **Super Admin dashboard** must have an interface for uploading a user data file for a specific university.
     2.  A downloadable CSV/Excel template is provided to ensure correct data format.
     3.  The system validates the uploaded file for structural correctness.
     4.  The system provides clear, user-centric, row-specific error feedback for any invalid data (e.g., "_Row 15: Duplicate School ID - A user with this School ID already exists for this university. Each user must have a unique ID._").
 
 **Story 1.6b: Asynchronous Import Processing**
 
--   **As a** Super Admin, **I want** a validated user CSV file to be processed as a background job, **so that** the import doesn't time out or degrade system performance.
+-   **As an** Admin or Super Admin, **I want** a validated user CSV file to be processed as a background job, **so that** the import doesn't time out or degrade system performance.
 -   **Acceptance Criteria:**
-    1.  After a file is successfully validated, the Super Admin can initiate the import process.
+    1.  After a file is successfully validated, the Admin or Super Admin can initiate the import process.
     2.  The import runs as an asynchronous job using the RQ worker.
     3.  A successful import creates records in the `users` table and assigns appropriate roles via the `user_roles` table.
     4.  New users are created with a default password based on their university-issued ID.
-    5.  The Super Admin receives a notification upon completion of the import.
+    5.  The **user who initiated the import** (either Admin or Super Admin) receives a notification upon completion of the import.
 
 **Story 1.7: Backup and Recovery Strategy**
 
