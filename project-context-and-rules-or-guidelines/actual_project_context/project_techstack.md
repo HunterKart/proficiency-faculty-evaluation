@@ -13,7 +13,7 @@ This is the complete, **no-overengineering** stack required to deliver the syste
 -   **React Router** — Client-side routing for role-based areas (Student, Faculty, Dept Head, Admin, Super Admin).
 -   **React Hook Form + Zod** — Forms + schema validation (Likert ranges, 5–300 word limits, time checks on submit).
 -   **TanStack Query** — Data fetching, caching, and **polling** for notifications & dashboard refresh.
--   **Recharts** — Bar/line charts for analytics.
+-   **Echarts** — Bar/line charts for analytics.
 -   **echarts echarts-wordcloud** — Render keyword clouds from KeyBERT outputs.
 
 ## Backend
