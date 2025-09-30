@@ -20,11 +20,12 @@ Existing faculty evaluation systems, particularly within the Philippines and at 
 
 #### **Change Log**
 
-| Date       | Version | Description                                                                                  | Author   |
-| :--------- | :------ | :------------------------------------------------------------------------------------------- | :------- |
-| 2025-09-29 | 2.1     | Added support for department-level form overrides to enhance customization and data quality. | John, PM |
-| 2025-09-28 | 2.0     | Final PRD with all 5 epics and elicitation refinements.                                      | John, PM |
-| 2025-09-28 | 1.0     | Initial PRD draft based on Project Brief and Capstone Manuscript.                            | John, PM |
+| Date       | Version | Description                                                                                       | Author   |
+| :--------- | :------ | :------------------------------------------------------------------------------------------------ | :------- |
+| 2025-09-30 | 3.0     | Added Epic 2 for historical data import & refined stories based on elicitation. Updated UI goals. | John, PM |
+| 2025-09-29 | 2.1     | Added support for department-level form overrides to enhance customization and data quality.      | John, PM |
+| 2025-09-28 | 2.0     | Final PRD with all 5 epics and elicitation refinements.                                           | John, PM |
+| 2025-09-28 | 1.0     | Initial PRD draft based on Project Brief and Capstone Manuscript.                                 | John, PM |
 
 ---
 
@@ -69,6 +70,10 @@ Existing faculty evaluation systems, particularly within the Philippines and at 
     -   All reports for an active review period shall be marked as **"Provisional."**
     -   When an Admin approves a flagged evaluation, an asynchronous job must **recalculate the provisional aggregates** for the affected parties.
     -   Admins shall have a function to **"Finalize and Lock Period,"** which runs a final aggregation and sets the `is_final_snapshot` flag to `true`.
+-   **FR9: Historical Data Import**
+    -   Admins shall have the ability to bulk import historical university data via CSV/Excel to prime the system.
+    -   The import process must support: **Academic Structure** (departments, programs, subjects), **User & Enrollment Records**, and **Past Evaluation Submissions** (including Likert and open-ended answers).
+    -   All imported historical evaluation records must be processed by the system's data analysis pipeline (as defined in FR5 and FR6).
 
 #### **Non-Functional Requirements**
 
@@ -78,6 +83,7 @@ Existing faculty evaluation systems, particularly within the Philippines and at 
 -   **NFR4: Security:** The system must implement robust user registration and authentication protocols.
 -   **NFR5: Extensibility and Research:** The V1 production system will exclusively use the fine-tuned XLM-ROBERTa model. For academic comparison, a separate, non-production script or environment will be created to benchmark baseline models (VADER, Naïve Bayes, mBERT).
 -   **NFR6: System Calibration:** The automated flagging algorithms must be calibrated to minimize false positives and ensure the volume of flagged evaluations is manageable for Admins.
+-   **NFR7: Data Privacy Compliance:** All processing of imported historical and live user data must be compliant with the Data Privacy Act of 2012 (RA 10173). The architecture must account for the secure handling and storage of Personally Identifiable Information (PII).
 
 ---
 
@@ -90,6 +96,7 @@ The user experience will embody **Modern, Data-Centric Professionalism**. The in
 #### **Core Screens and Views**
 
 -   **Students:** Login, Dashboard (view teachers to evaluate), Evaluation History, Profile Management.
+    -   **Student Dashboard Update:** The main dashboard will default to a "Pending Evaluations" view, presented in a clear matrix or table format showing teachers yet to be evaluated. It will also offer a user-selectable "Card View." A secondary tab will be available to show "Completed Evaluations" for the current, active period. The existing "Evaluation History" page in the sidebar will remain the primary location for viewing all submissions from all past periods.
 -   **Faculty:** Login, Dashboard (view personal results), Evaluation Insights, Performance Trends, Report Generation, AI Suggestion Page, Profile Management.
 -   **Department Heads:** All Faculty views, plus department-level result views, the ability to evaluate faculty, and Evaluation History (for their own submissions).
 -   **Admins:** Similar views as Department Heads (institutional, department, and faculty level), but with no AI Suggestion Page. Plus: Review Flagged Evaluations, Form & Period Management (with department-level overrides), Academic Structure Management, and User Management (Bulk Import).
@@ -100,6 +107,7 @@ The user experience will embody **Modern, Data-Centric Professionalism**. The in
 -   **Card-Based Layout:** Content will be organized into distinct cards with rounded corners and subtle shadows.
 -   **Data-First Dashboards:** The primary landing page for all roles will be a dashboard that immediately surfaces relevant data.
 -   **Responsive Sidebar Navigation:** A consistent, collapsible sidebar will serve as the primary navigation method.
+-   **Tab-Switching & View Modes:** Dashboards may use tabs to separate key data contexts (e.g., Pending vs. Completed) and offer view-switching controls (e.g., Table vs. Cards) where appropriate.
 -   **Contextual Clarity & Consistency:** The UI must always provide clear indicators of the user's current view (e.g., "Viewing: Department of IT Results"). The modern design aesthetic must be applied consistently across all parts of the application.
 
 ---
@@ -131,13 +139,15 @@ The architecture will be a **simple monolith** consisting of a single FastAPI ba
 
 -   **Epic 1: Platform Foundation & University Onboarding**
     -   **Goal:** To establish the core technical infrastructure, multi-tenant foundation, and the complete administrative workflow for a Super Admin to onboard a new university, manage its lifecycle, and provision its user accounts via bulk import. This epic delivers the initial, foundational value of a ready-to-configure university tenant.
--   **Epic 2: Administrative Control Panel**
+-   **Epic 2: Historical Data Onboarding & System Priming**
+    -   **Goal:** To provide University Admins with a robust toolset to manually manage and bulk import historical academic data, including institutional structure, user enrollments, and past evaluation records. This epic concludes by fine-tuning the AI sentiment model using this imported data, making both the data and the model **analysis-ready** for a later epic.
+-   **Epic 3: Administrative Control Panel**
     -   **Goal:** To provide University Admins with the complete toolset to manage the evaluation process, including the dynamic form builder and the flexible scheduling of evaluation periods with department-specific form assignments.
--   **Epic 3: The Core Evaluation & Data Integrity Loop**
+-   **Epic 4: The Core Evaluation & Data Integrity Loop**
     -   **Goal:** To enable students and department heads to submit high-quality evaluations, supported by robust, automated data integrity checks and a complete administrative review workflow.
--   **Epic 4: Data Processing & Insights Visualization**
+-   **Epic 5: Data Processing & Insights Visualization**
     -   **Goal:** To implement the asynchronous data analysis pipeline and provide all user roles with intuitive, role-based dashboards featuring clear, comparable data visualizations of evaluation results.
--   **Epic 5: AI-Powered Actionable Intelligence**
+-   **Epic 6: AI-Powered Actionable Intelligence**
     -   **Goal:** To empower faculty and department heads with advanced, AI-generated suggestions and downloadable reports that translate evaluation data into actionable insights for professional development.
 
 ---
@@ -224,9 +234,66 @@ The architecture will be a **simple monolith** consisting of a single FastAPI ba
     3.  All backups are stored in a secure, off-server location.
     4.  A `RECOVERY.md` document in the project repository details the step-by-step procedure to restore the system from backups.
 
-#### **Epic 2: Administrative Control Panel**
+#### **Epic 2: Historical Data Onboarding & System Priming**
 
-**Story 2.1: Evaluation Form Template Creation**
+-   **Guiding Principle for this Epic:** "All import functionality—including the UI, APIs, and background jobs—must be built as a generic, multi-tenant feature from the ground up. The code should not contain any hardcoded logic specific to a single university. Every operation must be strictly scoped to the `university_id` of the authenticated Admin. We are building a reusable platform feature, not a one-time migration script."
+
+**Stories:**
+
+1.  **`Story 2.1: Manual Academic Structure Management`**
+
+    -   _As an Admin, I want a dedicated interface to manually create, view, update, and manage individual academic structure items, so that I can make granular additions or corrections without needing to perform a bulk import._
+    -   **Acceptance Criteria:**
+        1.  The Admin dashboard contains a new "Academic Structure" management area.
+        2.  Within this area, the Admin can perform full CRUD operations for **Departments, Programs, and Subjects.**
+        3.  The UI enforces all relationships and constraints defined in the database schema.
+        4.  All changes are logged for auditing purposes.
+
+2.  **`Story 2.2: Import Job Monitoring`**
+
+    -   _As an Admin, I want a simple dashboard to view the status of my active and past import jobs, so that I can track progress and access results or error reports._
+    -   **Acceptance Criteria:**
+        1.  A new "Import History" page is added to the Admin dashboard.
+        2.  The page lists all initiated import jobs with their status.
+        3.  The 'Import History' table must display: **Job Type**, **Source Filename**, **Submitted At**, **Status**, and a **Details/Download** link.
+        4.  The table must support pagination.
+        5.  For a `Failed` job, the 'Details/Download' link must trigger the download of a report that contains the original row data plus an 'Error' column explaining the validation failure.
+        6.  The page must include a 'Cancel' button for any job that is still in `Queued` or `Processing`.
+    -   **Dev Note:** The import job lifecycle must include the statuses: `Queued`, `Validating`, `Processing`, `Completed`, `Failed`, `Cancelled`.
+
+3.  **`Story 2.3: Academic Structure Bulk Import`**
+
+    -   _As an Admin, I want to bulk import the university's entire academic structure from a CSV file, so that I can rapidly set up the foundational hierarchy._
+    -   **Acceptance Criteria:**
+        1.  The "Academic Structure" management area includes a "Bulk Import" feature.
+        2.  A downloadable CSV template is provided.
+        3.  The asynchronous job validates the uploaded CSV, returning a comprehensive error report if issues are found, and does not proceed until errors are resolved.
+        4.  A successful import correctly populates all relevant academic structure tables and is idempotent.
+        5.  The admin receives a notification and the job status is updated on the "Import History" page.
+    -   **Dev/QA Notes:** The Architect must define the precise CSV format. The asynchronous validation must prevent web server timeouts. QA will require 'bad' CSV files for testing.
+
+4.  **`Story 2.4: Historical User & Enrollment Bulk Import`**
+
+    -   _As an Admin, I want to bulk import historical user and enrollment data from CSV files, so that past academic records are accurately reflected in the system._
+    -   **AC & Notes:** Follows the same structure as Story 2.3 for importing users and enrollments.
+
+5.  **`Story 2.5: Historical Evaluation Records Bulk Import`**
+
+    -   _As an Admin, I want to bulk import past evaluation records (both numerical and open-ended) from a CSV file, so that historical feedback is available for analysis._
+    -   **AC & Notes:** Follows the same structure as Story 2.3 for importing historical evaluations.
+
+6.  **`Story 2.6: Fine-Tune Sentiment Analysis Model for Cebuano & Code-Switching`**
+    -   _As a System/Data Scientist, I want the primary sentiment analysis model (XLM-RoBERTa) to be fine-tuned on Cebuano and code-switched language, so that its predictions are accurate and reliable._
+    -   **Acceptance Criteria:**
+        1.  The fine-tuning script must be designed to consume a **pre-curated and labeled dataset** of evaluation records. The manual task of curating this dataset is a prerequisite.
+        2.  The script can be executed via a CLI command.
+        3.  The fine-tuned model must achieve its target accuracy metric on a held-out test set.
+        4.  The final, versioned model artifact is integrated into the RQ worker environment.
+    -   **Dev/QA Notes:** The Architect must define the storage location for model artifacts. QA must have access to logs to verify accuracy. A post-import validation script must be created to check for data integrity (e.g., orphaned records) before this epic is considered complete.
+
+#### **Epic 3: Administrative Control Panel**
+
+**Story 3.1: Evaluation Form Template Creation**
 
 -   **As an** Admin, **I want** to create a new evaluation form template by providing a name, description, and core settings, **so that** I can begin building a new evaluation instrument.
 -   **Acceptance Criteria:**
@@ -238,7 +305,7 @@ The architecture will be a **simple monolith** consisting of a single FastAPI ba
     6.  Upon saving, a new record is created in the `evaluation_form_templates` table with a default status of 'draft'.
     7.  **Developer Note:** For V1, the available Likert scales (4, 5, and 7-point) will be seeded directly into the `likert_scale_templates` table during initial deployment. This is not a feature for Admins to create their own scales.
 
-**Story 2.2: Managing Form Criteria**
+**Story 3.2: Managing Form Criteria**
 
 -   **As an** Admin, **I want** to add, edit, and reorder weighted criteria within a draft form template, **so that** I can structure the evaluation into logical sections.
 -   **Acceptance Criteria:**
@@ -247,7 +314,7 @@ The architecture will be a **simple monolith** consisting of a single FastAPI ba
     3.  The system must validate that the sum of all criteria weights for a single form template equals 100 before the form can be activated.
     4.  I can change the display order of criteria within the form.
 
-**Story 2.3: Managing Form Questions**
+**Story 3.3: Managing Form Questions**
 
 -   **As an** Admin, **I want** to add Likert-scale and open-ended questions to the criteria within a draft form template, **so that** I can capture detailed feedback.
 -   **Acceptance Criteria:**
@@ -257,7 +324,7 @@ The architecture will be a **simple monolith** consisting of a single FastAPI ba
     4.  I can set whether each question is required to be answered or optional.
     5.  At any point while editing a 'draft' template, I can select a "Preview" option that shows how the form will be rendered for evaluators.
 
-**Story 2.4a: Form Template Activation & Duplication**
+**Story 3.4a: Form Template Activation & Duplication**
 
 -   **As an** Admin, **I want** to activate a completed draft template and duplicate existing templates, **so that** I can finalize forms for assignment and iterate on new versions.
 -   **Acceptance Criteria:**
@@ -270,7 +337,7 @@ The architecture will be a **simple monolith** consisting of a single FastAPI ba
     3.  An 'active' template cannot be edited. To create a new version, I must use a "Duplicate" function.
     4.  When an Admin duplicates an active template, the system creates a new template with '(Copy)' appended to its name, sets its status to 'draft', and immediately redirects the Admin to the edit page for this new copy.
 
-**Story 2.4b: Form Template Archiving**
+**Story 3.4b: Form Template Archiving**
 
 -   **As an** Admin, **I want** to archive templates that are no longer in use, **so that** I can keep my list of active templates clean and relevant.
 -   **Acceptance Criteria:**
@@ -278,7 +345,7 @@ The architecture will be a **simple monolith** consisting of a single FastAPI ba
     2.  A template with a status of 'assigned' cannot be archived. The option should be disabled or hidden.
     3.  An automated process will permanently delete any template that has remained in the 'archived' status for more than 30 days.
 
-**Story 2.5: Assigning Forms to Evaluation Periods**
+**Story 3.5: Assigning Forms to Evaluation Periods**
 
 -   **As an** Admin, **I want** to assign a default form template to an academic term and have the option to assign different templates for specific departments, **so that** I can launch a flexible and nuanced evaluation period.
 -   **Acceptance Criteria:**
@@ -294,9 +361,9 @@ The architecture will be a **simple monolith** consisting of a single FastAPI ba
     10. The system prevents the creation of a duplicate assignment for the same university, term, and period.
     11. Upon successful assignment, the status of all selected form templates (both default and overrides) is updated from 'active' to 'assigned'.
 
-#### **Epic 3: The Core Evaluation & Data Integrity Loop**
+#### **Epic 4: The Core Evaluation & Data Integrity Loop**
 
-**Story 3.1: Evaluation Submission**
+**Story 4.1: Evaluation Submission**
 
 -   **As an** Evaluator (Student or Department Head), **I want** to select a faculty member and submit a complete evaluation during an active evaluation period, **so that** I can provide my feedback on their performance.
 -   **Acceptance Criteria:**
@@ -310,7 +377,7 @@ The architecture will be a **simple monolith** consisting of a single FastAPI ba
     8.  Upon clicking "Submit," the system saves my answers, linked to a new record in the `evaluation_submissions` table.
     9.  Once an evaluation is submitted, it is removed from my list of pending evaluations for that period.
 
-**Story 3.2: Pre-Submission Nudge for Low-Effort Ratings**
+**Story 4.2: Pre-Submission Nudge for Low-Effort Ratings**
 
 -   **As an** Evaluator, **I want** to be gently prompted if all my numerical ratings are the same, **so that** I am encouraged to provide more thoughtful and specific feedback.
 -   **Acceptance Criteria:**
@@ -319,7 +386,7 @@ The architecture will be a **simple monolith** consisting of a single FastAPI ba
     3.  The message text is concise, such as: "To provide the most helpful feedback, consider adding specific examples in the comments below."
     4.  The message does not prevent me from submitting the evaluation.
 
-**Story 3.3: Automated "Low-Confidence" Flagging**
+**Story 4.3: Automated "Low-Confidence" Flagging**
 
 -   **As an** Admin, **I want** the system to automatically flag submissions that appear to be low-effort, **so that** I can review them for data quality.
 -   **Acceptance Criteria:**
@@ -327,7 +394,7 @@ The architecture will be a **simple monolith** consisting of a single FastAPI ba
     2.  A submission is flagged with a reason of "Low-Confidence" if it meets **both** of the following criteria: (A) the variance of all Likert-scale scores is zero, **AND** (B) the submission contains no meaningful qualitative feedback (i.e., all _optional_ open-ended questions were left blank).
     3.  If a submission is flagged, a new record is created in the `flagged_evals` table for administrative review.
 
-**Story 3.4: Asynchronous "Recycled Content" Flagging**
+**Story 4.4: Asynchronous "Recycled Content" Flagging**
 
 -   **As an** Admin, **I want** the system to automatically detect and flag evaluations where an evaluator reuses their own text, **so that** I can ensure the originality of feedback.
 -   **Acceptance Criteria:**
@@ -336,7 +403,7 @@ The architecture will be a **simple monolith** consisting of a single FastAPI ba
     3.  If the text has over 95% similarity to one of their previous submissions, a "Recycled Content" flag is created for the evaluation.
     4.  The notification sent to the student for recycled content must clearly explain that reused text was detected and state the importance of providing original feedback for each unique evaluation.
 
-**Story 3.5a: Flagged Evaluation Dashboard (View Only)**
+**Story 4.5a: Flagged Evaluation Dashboard (View Only)**
 
 -   **As an** Admin, **I want** a dashboard to view a list of all flagged evaluations and see the detailed reasons for each flag, **so that** I can assess the queue and understand the issues.
 -   **Acceptance Criteria:**
@@ -344,7 +411,7 @@ The architecture will be a **simple monolith** consisting of a single FastAPI ba
     2.  The list displays the faculty member, the reason(s) for the flag (e.g., "Low-Confidence"), and the submission date.
     3.  Selecting a flagged evaluation shows a detailed view with a side-by-side comparison of the submission's numerical ratings and its open-ended text.
 
-**Story 3.5b: Flagged Evaluation Processing**
+**Story 4.5b: Flagged Evaluation Processing**
 
 -   **As an** Admin, while viewing a flagged evaluation, **I want** to be able to Approve, Reject, or Request Resubmission, **so that** I can process the queue and maintain data integrity.
 -   **Acceptance Criteria:**
@@ -353,7 +420,7 @@ The architecture will be a **simple monolith** consisting of a single FastAPI ba
     3.  Choosing **"Reject"** permanently deletes the evaluation submission and all its associated answers. The data will be excluded from all aggregate calculations, and an anonymous notification with the reason is sent to the student.
     4.  Choosing **"Request Resubmission"** marks the original submission as invalid (to be excluded from calculations) and triggers an anonymous notification for the student to submit a new evaluation.
 
-**Story 3.6: Viewing Resolved Flags**
+**Story 4.6: Viewing Resolved Flags**
 
 -   **As an** Admin, **I want** to be able to view a history of evaluations that I have already resolved, **so that** I can maintain an audit trail and reference past decisions.
 -   **Acceptance Criteria:**
@@ -361,9 +428,9 @@ The architecture will be a **simple monolith** consisting of a single FastAPI ba
     2.  The resolved list shows the submission details, the original flag reason, the action taken (Approved, Rejected, etc.), who resolved it, and the date of resolution.
     3.  This view is read-only.
 
-#### **Epic 4: Data Processing & Insights Visualization**
+#### **Epic 5: Data Processing & Insights Visualization**
 
-**Story 4.1: Asynchronous Quantitative Analysis Job**
+**Story 5.1: Asynchronous Quantitative Analysis Job**
 
 -   **As a** System, **I want** to process the numerical Likert-scale answers from a submitted evaluation in a background job, **so that** the raw scores are calculated and stored for aggregation without blocking the user.
 -   **Acceptance Criteria:**
@@ -374,13 +441,13 @@ The architecture will be a **simple monolith** consisting of a single FastAPI ba
     5.  The processed results, including per-question medians and per-criterion scores, are stored in the `numerical_aggregates` table, ready for the final normalization step in a subsequent story.
     6.  The job is marked as complete, and any errors during processing are logged.
 
-**Story 4.2: Asynchronous Qualitative Analysis Job**
+**Story 5.2: Asynchronous Qualitative Analysis Job**
 
 -   **As a** System, **I want** to process the open-ended feedback from a submitted evaluation in a background job, **so that** qualitative insights like sentiment and key themes are extracted and stored for aggregation.
 -   **Acceptance Criteria:**
     1.  When a new, valid evaluation submission is processed, a job is added to the asynchronous work queue (Redis+RQ) to handle its open-ended answers.
     2.  The job retrieves the text from the `evaluation_open_ended_answers` table for the given submission.
-    3.  **Sentiment Analysis:** The job must use the **XLM-ROBERTa** model to analyze the text. The results must be saved to the `open_ended_sentiments` table and must include:
+    3.  **Sentiment Analysis:** The job must use the **fine-tuned XLM-ROBERTa** model to analyze the text. The results must be saved to the `open_ended_sentiments` table and must include:
         -   The final `predicted_sentiment_label` (e.g., 'positive', 'neutral', or 'negative').
         -   The `predicted_sentiment_label_score` (the probability of the predicted label).
         -   The full sentiment distribution: `positive_score`, `neutral_score`, and `negative_score`.
@@ -388,14 +455,14 @@ The architecture will be a **simple monolith** consisting of a single FastAPI ba
     4.  **Keyword Extraction:** The job must use the **KeyBERT** model to extract relevant keywords and phrases. The results are saved to the `open_ended_keywords` table and must adhere to the following:
         -   Only keywords with a `relevance_score` above a configurable threshold are saved to prevent irrelevant results.
         -   The `relevance_score` itself must be stored with each keyword.
-    5.  The processed qualitative results are now ready for the final aggregation and normalization step (Story 4.3).
+    5.  The processed qualitative results are now ready for the final aggregation and normalization step (Story 5.3).
     6.  The job is marked as complete, and any processing errors are logged.
 
-**Story 4.3: Final Aggregation and Normalization Job**
+**Story 5.3: Final Aggregation and Normalization Job**
 
 -   **As a** System, **I want** to run a final aggregation and normalization job, **so that** the individual quantitative and qualitative analysis results are combined into standardized, comparable scores for reporting and visualization.
 -   **Acceptance Criteria:**
-    1.  The job is triggered after the prerequisite quantitative (4.1) and qualitative (4.2) analysis jobs for a submission or batch of submissions are successfully completed.
+    1.  The job is triggered after the prerequisite quantitative (5.1) and qualitative (5.2) analysis jobs for a submission or batch of submissions are successfully completed.
     2.  **Cohort Calculation:** The job must first calculate the cohort baseline statistics (**mean μ** and **standard deviation σ**) for the relevant comparison group (e.g., department-level) for both the `quant_score_raw` and `qual_score_raw` values.
     3.  **Z-Score Calculation:** Using the cohort baselines, the job must calculate the normalized **`z_quant`** and **`z_qual`** scores for each faculty evaluation, representing how many standard deviations they are from the cohort mean.
     4.  **Final Weighted Score:** The job must calculate the **`final_score_60_40`** by applying the 60/40 weighting to the z-scores as defined in the non-functional requirements.
@@ -403,7 +470,17 @@ The architecture will be a **simple monolith** consisting of a single FastAPI ba
     6.  **Period Finalization:** The job must correctly handle period finalization. When an Admin triggers the "Finalize and Lock Period" function, this job runs a final time for that period and sets the `is_final_snapshot` flag to `true` for all relevant records, preventing them from being overwritten.
     7.  The job is marked as complete, and any errors are logged.
 
-**Story 4.4: Dashboard Data Visualization**
+**Story 5.4: Initial Batch Processing of Historical Data**
+
+-   **As an** Admin, **I want** to trigger a one-time batch job to process all imported historical evaluation data using the newly built analysis pipeline, **so that** the system's dashboards are populated with a rich, longitudinal dataset.
+-   **Acceptance Criteria:**
+    1.  The Admin dashboard provides an action to start the historical data processing job.
+    2.  The job correctly identifies and queues all records imported via Epic 2 for processing.
+    3.  The job uses the analysis engines built in stories 5.1, 5.2, and 5.3 to process the historical data.
+    4.  Upon completion, the `numerical_aggregates` and `sentiment_aggregates` tables are populated with the historical results.
+    5.  The Admin who initiated the job receives a notification upon completion.
+
+**Story 5.5: Dashboard Data Visualization**
 
 -   **As a** User (Faculty, Department Head, or Admin), **I want** to view the processed and aggregated evaluation results on my role-specific dashboard, **so that** I can gain clear, visual insights into performance.
 -   **Acceptance Criteria:**
@@ -417,9 +494,10 @@ The architecture will be a **simple monolith** consisting of a single FastAPI ba
         -   **Qualitative KPIs:** Display the count and percentage for each sentiment category, along with the top three keywords associated with each.
         -   **Quantitative KPIs:** Display the overall quantitative score, the highest and lowest rated criteria with their scores, and a comparison metric showing the change from the previous evaluation period.
     6.  The **Department Head and Admin dashboards** must implement the "mode-switching" functionality, allowing them to view aggregated data for a whole department or drill down to a specific faculty member's results.
-    7.  All visualizations must clearly indicate when data is **"Provisional"** versus **"Final"**.
+    7.  All visualizations must clearly indicate when data is **"Provisional"** versus **"Final."**
+    8.  All dashboards must clearly label and visually distinguish between analytics derived from **'Imported Historical Data'** versus **'Live Proficiency Data'.**
 
-**Story 4.5: Evaluation Report Generation and Export**
+**Story 5.6: Evaluation Report Generation and Export**
 
 -   **As a** User (Faculty, Department Head, or Admin), **I want** to access a dedicated reports page to generate and download comprehensive evaluation results, **so that** I can easily archive, share, and analyze data offline in a structured manner.
 -   **Acceptance Criteria:**
@@ -430,11 +508,11 @@ The architecture will be a **simple monolith** consisting of a single FastAPI ba
     5.  For **CSV/Excel format**, the backend must use the **pandas** library to generate a well-structured file containing the detailed aggregated numerical and sentiment scores.
     6.  The generated file is returned to the user, initiating a download in their browser.
 
-#### **Epic 5: AI-Powered Actionable Intelligence**
+#### **Epic 6: AI-Powered Actionable Intelligence**
 
 **Dev Note:** The implementation must include specific monitoring for the AI pipeline, tracking metrics like average suggestion generation time, model error rate, and Redis queue length to identify performance bottlenecks early.
 
-**Story 5.1: AI Assistant Page and Controls**
+**Story 6.1: AI Assistant Page and Controls**
 
 -   **As a** Faculty or Department Head, **I want** to access a dedicated "AI Assistant" page with filters and pre-defined actions, **so that** I can easily set the context for generating performance suggestions.
 -   **Acceptance Criteria:**
@@ -446,7 +524,7 @@ The architecture will be a **simple monolith** consisting of a single FastAPI ba
     6.  The main content area is initially empty or displays a placeholder instructing the user to select their filters and choose a generation action.
     7.  Once a report is displayed, a "Start Over" or "Clear Results" button must become visible. Clicking this button will clear the results from the view and re-enable all action buttons.
 
-**Story 5.2: AI Suggestion Generation**
+**Story 6.2: AI Suggestion Generation**
 
 -   **As a** Faculty or Department Head, **I want** to click a pre-defined action button and have the system generate relevant suggestions, **so that** I can receive AI-powered insights based on my selected data.
 -   **Acceptance Criteria:**
@@ -457,7 +535,7 @@ The architecture will be a **simple monolith** consisting of a single FastAPI ba
     5.  If the model fails to generate a response or times out, the API must return a specific error (e.g., 503 Service Unavailable), and the frontend must display a user-friendly message.
     6.  The generated suggestions are returned to the frontend and displayed clearly in the main content area of the "AI Assistant" page.
 
-**Story 5.3: Saving and Viewing Suggestion History**
+**Story 6.3: Saving and Viewing Suggestion History**
 
 -   **As a** Faculty or Department Head, **I want** to save generated suggestions and view a history of my past requests, **so that** I can track insights and progress over time.
 -   **Acceptance Criteria:**
@@ -467,7 +545,7 @@ The architecture will be a **simple monolith** consisting of a single FastAPI ba
     4.  The "AI Assistant" page must contain a "History" tab or section that displays a list of previously saved suggestions, showing the date, context, and a preview.
     5.  Selecting a historical item displays the full saved report.
 
-**Story 5.4: Exporting AI Suggestions**
+**Story 6.4: Exporting AI Suggestions**
 
 -   **As a** Faculty or Department Head, **I want** to download my generated AI suggestions as a professional-looking document, **so that** I can easily share, print, or archive these insights for my records.
 -   **Acceptance Criteria:**
@@ -483,6 +561,6 @@ The architecture will be a **simple monolith** consisting of a single FastAPI ba
 
 This document provides the complete requirements for the "Proficiency" application.
 
--   **For the Architect (`*agent architect`):** Please use this PRD as the primary input to create the `fullstack-architecture.md` document. Pay close attention to the technical assumptions in Section 4 and the detailed data flow implied by the stories in Epics 4 and 5.
+-   **For the Architect (`*agent architect`):** Please use this PRD as the primary input to create the `fullstack-architecture.md` document. Pay close attention to the technical assumptions in Section 4 and the detailed data flow implied by the stories in Epics 5 and 6.
 
 -   **For the Product Owner (`*agent po`):** Please use the `po-master-checklist` to perform a final validation of this document for completeness and consistency before the Architect begins their work.
