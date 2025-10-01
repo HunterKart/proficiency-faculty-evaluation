@@ -9,7 +9,7 @@
 -   **Develop "Proficiency," a multi-tenant SaaS web platform** to modernize the faculty evaluation process for educational institutions, starting with the University of Cebu - Lapu-Lapu and Mandaue.
 -   **Implement an AI-powered analysis engine** that automatically processes qualitative feedback from students and department heads to provide sentiment analysis, keyword extraction, and generate actionable, data-driven suggestions for improvement.
 -   **Ensure high data quality and evaluation integrity** through automated, server-side checks that flag low-effort submissions and detect recycled content.
--   **Provide highly dynamic and customizable evaluation forms** that allow administrators to tailor evaluation criteria, questions, and scoring to diverse institutional needs, including support for department-specific variations within a single evaluation period.
+-   **Provide highly dynamic and customizable evaluation forms** that allow administrators to tailor evaluation criteria, questions, and scoring to diverse institutional needs.
 -   **Deliver intuitive, role-based dashboards and visualizations** to make evaluation results easy to interpret for faculty, department heads, and administrators, supporting continuous faculty development and institutional decision-making.
 
 #### **Background Context**
@@ -20,12 +20,16 @@ Existing faculty evaluation systems, particularly within the Philippines and at 
 
 #### **Change Log**
 
-| Date       | Version | Description                                                                                       | Author   |
-| :--------- | :------ | :------------------------------------------------------------------------------------------------ | :------- |
-| 2025-09-30 | 3.0     | Added Epic 2 for historical data import & refined stories based on elicitation. Updated UI goals. | John, PM |
-| 2025-09-29 | 2.1     | Added support for department-level form overrides to enhance customization and data quality.      | John, PM |
-| 2025-09-28 | 2.0     | Final PRD with all 5 epics and elicitation refinements.                                           | John, PM |
-| 2025-09-28 | 1.0     | Initial PRD draft based on Project Brief and Capstone Manuscript.                                 | John, PM |
+| Date       | Version | Description                                                                                                                                    | Author   |
+| :--------- | :------ | :--------------------------------------------------------------------------------------------------------------------------------------------- | :------- |
+| 2025-10-02 | 6.0     | Final PRD incorporating all refinements from the completed elicitation process. PRD is now locked and ready for architecture.                  | John, PM |
+| 2025-10-02 | 5.0     | Final PRD incorporating all elicitation refinements and multi-admin concurrency controls. Ready for architecture.                              | John, PM |
+| 2025-10-02 | 4.0     | Final version incorporating all elicitation refinements. Removed overrides, added safeguards (Cancel Period, Timezone), and improved UX flows. | John, PM |
+| 2025-10-02 | 3.1     | Removed department-level form overrides to reduce complexity. Aligned PRD with product decisions from front-end-spec-1.7.                      | John, PM |
+| 2025-09-30 | 3.0     | Added Epic 2 for historical data import & refined stories based on elicitation. Updated UI goals.                                              | John, PM |
+| 2025-09-29 | 2.1     | Added support for department-level form overrides to enhance customization and data quality.                                                   | John, PM |
+| 2025-09-28 | 2.0     | Final PRD with all 5 epics and elicitation refinements.                                                                                        | John, PM |
+| 2025-09-28 | 1.0     | Initial PRD draft based on Project Brief and Capstone Manuscript.                                                                              | John, PM |
 
 ---
 
@@ -38,11 +42,9 @@ Existing faculty evaluation systems, particularly within the Philippines and at 
     -   For V1, user creation will be limited to two methods: 1) **Admin/Super Admin bulk import** via CSV/Excel and 2) **Self-registration using a valid, university-provided invitation token**. The "evidence-based" manual sign-up is deferred to a post-V1 release.
     -   **Super Admins** shall manage the university registration and approval lifecycle.
 -   **FR2: Dynamic Evaluation Form & Period Management**
-    -   Admins shall have the ability to **create, modify, and manage dynamic evaluation form templates**.
-    -   **FR2.1: Department-Level Form Overrides:** The system shall allow Administrators to assign a _default_ active form template to an evaluation period, which applies to all departments, and optionally assign different _override_ form templates to specific departments within that same period.
-    -   **FR2.2: Common Core Criteria Enforcement:** An override form template can only be assigned to a department if it shares a foundational set of "common core criteria" with the period's default form template. The system must enforce this rule to ensure data alignment for high-level reporting.
+    -   Admins shall have the ability to **create, modify, and manage dynamic evaluation form templates** with the statuses: `draft`, `active`, `assigned`, and `archived`.
     -   Admins shall **assign form templates to specific evaluation periods**, defined by school year, semester (1st, 2nd, Summer), and assessment period (Midterm, Finals).
-    -   The system shall enforce a business rule preventing the assignment of a new evaluation form template once an evaluation period is already ongoing.
+    -   An `'assigned'` form template is locked and cannot be edited. An `'active'` form template remains editable.
 -   **FR3: Evaluation Submission & Integrity**
     -   The system must implement a **"Pre-Submission Nudge,"** a non-blocking UI message to encourage users with low-variance Likert scores to provide written examples.
     -   A submission must be automatically flagged with **"Low-Confidence"** if it contains both low-variance Likert scores AND short or empty open-ended answers.
@@ -50,24 +52,22 @@ Existing faculty evaluation systems, particularly within the Philippines and at 
 -   **FR4: Flagged Evaluation Workflow**
     -   The system must automatically flag evaluations for data inconsistencies, such as a **sentiment-coherence mismatch**.
     -   Admins shall have a dedicated interface to review all flagged evaluations.
-    -   Admins must be able to resolve a flagged evaluation by choosing one of three actions: **Approve**, **Reject**, or **Request Resubmission**.
-    -   **FR4.1:** The notification sent to a Student for a rejected evaluation **must be anonymous** and clearly state the reason for rejection to guide them in providing a better resubmission.
+    -   Admins must be able to resolve a flagged evaluation by choosing one of three actions: **Approve**, **Archive**, or **Request Resubmission**.
+    -   **FR4.1:** The notification sent to a Student for a resubmission request or archived evaluation **must be anonymous** and clearly state the reason to guide them.
     -   **FR4.2:** The Admin's review dashboard for flagged evaluations must provide a **side-by-side comparison** of the submission's numerical ratings and its open-ended text.
 -   **FR5: Data Analysis Pipeline**
     -   All evaluation submissions shall be processed asynchronously via a **job queue (Redis+RQ)**.
     -   The pipeline must separate analysis into a **Quantitative Layer** and a **Qualitative Layer**.
     -   A final layer shall perform **Normalization and Aggregation** to combine scores and prepare data for visualization.
-    -   **FR5.1:** Evaluation submissions with a status of 'rejected' or 'pending review' **must be excluded** from all aggregate calculations.
+    -   **FR5.1:** Evaluation submissions with a status of 'archived' or 'pending review' **must be excluded** from all aggregate calculations.
 -   **FR6: AI-Powered Analysis and Insights**
     -   The system must perform automated **sentiment analysis** (Primary Model: XLM-ROBERTa) and **keyword extraction** (KeyBERT).
     -   A dedicated **"AI Assistant" page** shall be available to Faculty and Department Heads to generate reports and suggestions from processed data using the Flan-T5 model.
 -   **FR7: Dashboards and Visualizations**
     -   The system shall present data using specific visualizations: **Word Clouds, Bar Charts, and Performance Trend Line Charts**. Admins will also have access to an **Evaluation Submission Behavior Line Chart**.
-    -   **FR7.1: Aligned High-Level Reporting:** For institutional or cross-departmental views, dashboards and visualizations shall _only_ aggregate and compare scores from the shared, "common core criteria" to ensure fair, apples-to-apples comparisons.
-    -   **FR7.2: Detailed Departmental Reporting:** When drilling down to a specific department's results, dashboards shall display all criteria, including both the core and any department-specific ones used in an override form.
     -   Department Heads and Admins must be able to switch between different data views or **"modes"** (e.g., department-wide, specific faculty results).
 -   **FR8: Provisional and Finalized Reporting Workflow**
-    -   All reports for an active review period shall be marked as **"Provisional."**
+    -   All reports for an active review period shall be marked as **"Provisional."**.
     -   When an Admin approves a flagged evaluation, an asynchronous job must **recalculate the provisional aggregates** for the affected parties.
     -   Admins shall have a function to **"Finalize and Lock Period,"** which runs a final aggregation and sets the `is_final_snapshot` flag to `true`.
 -   **FR9: Historical Data Import**
@@ -84,6 +84,8 @@ Existing faculty evaluation systems, particularly within the Philippines and at 
 -   **NFR5: Extensibility and Research:** The V1 production system will exclusively use the fine-tuned XLM-ROBERTa model. For academic comparison, a separate, non-production script or environment will be created to benchmark baseline models (VADER, Naïve Bayes, mBERT).
 -   **NFR6: System Calibration:** The automated flagging algorithms must be calibrated to minimize false positives and ensure the volume of flagged evaluations is manageable for Admins.
 -   **NFR7: Data Privacy Compliance:** All processing of imported historical and live user data must be compliant with the Data Privacy Act of 2012 (RA 10173). The architecture must account for the secure handling and storage of Personally Identifiable Information (PII).
+-   **NFR8: Timezone Standardization:** The entire platform shall operate on a single, standardized timezone: **Philippine Standard Time (PST / Asia/Manila)**. All times displayed in the UI must be explicitly labeled as PST to prevent ambiguity.
+-   **NFR9: Concurrency Control:** To ensure data integrity in a multi-admin environment, the system must implement **Optimistic Locking** for all shared, editable resources (e.g., Form Templates). Concurrent actions (e.g., two admins resolving the same item) must be handled gracefully on the backend on a "first-come, first-served" basis.
 
 ---
 
@@ -91,15 +93,15 @@ Existing faculty evaluation systems, particularly within the Philippines and at 
 
 #### **Overall UX Vision**
 
-The user experience will embody **Modern, Data-Centric Professionalism**. The interface must feel clean, intuitive, and trustworthy, visually communicating a significant upgrade from traditional university systems. The design should prioritize clarity and ease-of-use, presenting complex evaluation data through simple, digestible visualizations. The design should actively avoid the cluttered, table-heavy, and visually dated aesthetic common in traditional enterprise portals. **Clarity and intuitive data visualization are the primary goals.**
+The user experience will embody **Modern, Data-Centric Professionalism**. The interface must feel clean, intuitive, and trustworthy, visually communicating a significant upgrade from traditional university systems. The design should prioritize clarity and ease-of-use, presenting complex evaluation data through simple, digestible visualizations. The design should actively avoid the cluttered, table-heavy, and visually dated aesthetic common in traditional enterprise portals. **Clarity and intuitive data visualization are the primary goals**.
 
 #### **Core Screens and Views**
 
--   **Students:** Login, Dashboard (view teachers to evaluate), Evaluation History, Profile Management.
-    -   **Student Dashboard Update:** The main dashboard will default to a "Pending Evaluations" view, presented in a clear matrix or table format showing teachers yet to be evaluated. It will also offer a user-selectable "Card View." A secondary tab will be available to show "Completed Evaluations" for the current, active period. The existing "Evaluation History" page in the sidebar will remain the primary location for viewing all submissions from all past periods.
+-   **Students:** Login, Dashboard, Evaluation History, Profile Management.
+    -   The Student Dashboard will feature two tabs: "Pending Evaluations" (default) and "Completed Evaluations" for the current, active period. The "Pending Evaluations" view will default to a clear **matrix or table format**, with a user-selectable control to switch to a **card-based view**.
 -   **Faculty:** Login, Dashboard (view personal results), Evaluation Insights, Performance Trends, Report Generation, AI Suggestion Page, Profile Management.
--   **Department Heads:** All Faculty views, plus department-level result views, the ability to evaluate faculty, and Evaluation History (for their own submissions).
--   **Admins:** Similar views as Department Heads (institutional, department, and faculty level), but with no AI Suggestion Page. Plus: Review Flagged Evaluations, Form & Period Management (with department-level overrides), Academic Structure Management, and User Management (Bulk Import).
+-   **Department Heads:** All Faculty views, plus a tabbed dashboard ("Overview" and "Explore Data") for department-level results, the ability to evaluate faculty, and Evaluation History (for their own submissions).
+-   **Admins:** Similar views as Department Heads (a tabbed "Overview" and "Explore Data" dashboard for institutional, department, and faculty levels), but with no AI Suggestion Page. Plus: Review Flagged Evaluations, Form & Period Management, Academic Structure Management, and User Management (Bulk Import).
 -   **Super Admins:** Login, Dashboard (platform metrics), University Management, User Management, Profile Management.
 
 #### **Key Interaction Paradigms**
@@ -107,7 +109,7 @@ The user experience will embody **Modern, Data-Centric Professionalism**. The in
 -   **Card-Based Layout:** Content will be organized into distinct cards with rounded corners and subtle shadows.
 -   **Data-First Dashboards:** The primary landing page for all roles will be a dashboard that immediately surfaces relevant data.
 -   **Responsive Sidebar Navigation:** A consistent, collapsible sidebar will serve as the primary navigation method.
--   **Tab-Switching & View Modes:** Dashboards may use tabs to separate key data contexts (e.g., Pending vs. Completed) and offer view-switching controls (e.g., Table vs. Cards) where appropriate.
+-   **Tab-Switching & View Modes:** Dashboards may use tabs to separate key data contexts (e.g., Overview vs. Explore Data) and offer view-switching controls where appropriate.
 -   **Contextual Clarity & Consistency:** The UI must always provide clear indicators of the user's current view (e.g., "Viewing: Department of IT Results"). The modern design aesthetic must be applied consistently across all parts of the application.
 
 ---
@@ -142,7 +144,7 @@ The architecture will be a **simple monolith** consisting of a single FastAPI ba
 -   **Epic 2: Historical Data Onboarding & System Priming**
     -   **Goal:** To provide University Admins with a robust toolset to manually manage and bulk import historical academic data, including institutional structure, user enrollments, and past evaluation records. This epic concludes by fine-tuning the AI sentiment model using this imported data, making both the data and the model **analysis-ready** for a later epic.
 -   **Epic 3: Administrative Control Panel**
-    -   **Goal:** To provide University Admins with the complete toolset to manage the evaluation process, including the dynamic form builder and the flexible scheduling of evaluation periods with department-specific form assignments.
+    -   **Goal:** To provide University Admins with the complete toolset to manage the evaluation process, including the dynamic form builder and the flexible scheduling of evaluation periods.
 -   **Epic 4: The Core Evaluation & Data Integrity Loop**
     -   **Goal:** To enable students and department heads to submit high-quality evaluations, supported by robust, automated data integrity checks and a complete administrative review workflow.
 -   **Epic 5: Data Processing & Insights Visualization**
@@ -200,10 +202,10 @@ The architecture will be a **simple monolith** consisting of a single FastAPI ba
 -   **As a** Super Admin, **I want** to view and manage a queue of pending university registration requests, **so that** I can approve or reject new institutions.
 -   **Acceptance Criteria:**
     1.  The initial Super Admin dashboard must display summary cards for 'Active Universities,' 'Total Users,' and 'Pending Requests'.
-    2.  The main component of the dashboard is a table listing all pending university registration requests. Each row in the table is clickable, leading to a detailed view of the specific request.
+    2.  The main component of the dashboard is an interface for managing requests through distinct stages: 'New', 'In Review', and 'Resolved'.
     3.  Approving a request creates a new record in the `universities` table, creates an initial `Admin` account in the `users` table, and updates the request status to 'approved'.
     4.  Upon approval, an email is sent to the `contact_person_email` containing a confirmation message and a unique link to verify their new Admin account and set their password.
-    5.  Rejecting a request prompts for a reason and triggers an email notification to the applicant with the reason for rejection.
+    5.  Rejecting a request requires a reason and triggers an email notification to the applicant with the reason for rejection, moving the request to the 'Resolved' stage.
     6.  The login page, when encountering an unverified Admin account, displays an error message and a 'Resend Verification Email' button that re-triggers the confirmation email.
 
 **Story 1.6a: Bulk Import Validation & Feedback**
@@ -293,6 +295,8 @@ The architecture will be a **simple monolith** consisting of a single FastAPI ba
 
 #### **Epic 3: Administrative Control Panel**
 
+_UX Note: To improve the first-time user experience, the "Evaluation Management" page should consider a guided wizard or checklist for new Admins, walking them through the `Create -> Activate -> Assign` sequence._
+
 **Story 3.1: Evaluation Form Template Creation**
 
 -   **As an** Admin, **I want** to create a new evaluation form template by providing a name, description, and core settings, **so that** I can begin building a new evaluation instrument.
@@ -326,40 +330,39 @@ The architecture will be a **simple monolith** consisting of a single FastAPI ba
 
 **Story 3.4a: Form Template Activation & Duplication**
 
--   **As an** Admin, **I want** to activate a completed draft template and duplicate existing templates, **so that** I can finalize forms for assignment and iterate on new versions.
+-   **As an** Admin, **I want** to activate, edit, and duplicate form templates, **so that** I can manage my forms efficiently.
 -   **Acceptance Criteria:**
-    1.  I can "Activate" a 'draft' template only if all of the following conditions are met:
-        -   It has a name, intended evaluator label, and a set Likert scale.
-        -   It contains at least three criteria.
-        -   Each criterion contains at least three Likert-scale questions.
-        -   The sum of all criteria weights equals 100.
-    2.  From the main list of templates, I can select a "Preview" option for any template (regardless of its status) to see how it is rendered.
-    3.  An 'active' template cannot be edited. To create a new version, I must use a "Duplicate" function.
-    4.  When an Admin duplicates an active template, the system creates a new template with '(Copy)' appended to its name, sets its status to 'draft', and immediately redirects the Admin to the edit page for this new copy.
-
-**Story 3.4b: Form Template Archiving**
-
--   **As an** Admin, **I want** to archive templates that are no longer in use, **so that** I can keep my list of active templates clean and relevant.
--   **Acceptance Criteria:**
-    1.  I can "Archive" an 'active' template. This changes its status to 'archived' and hides it from the main list.
-    2.  A template with a status of 'assigned' cannot be archived. The option should be disabled or hidden.
-    3.  An automated process will permanently delete any template that has remained in the 'archived' status for more than 30 days.
+    1.  I can "Activate" a 'draft' template only if all validation rules are met (e.g., has name, criteria, questions, and weights sum to 100).
+    2.  An **'active'** template remains **editable**. Editing an active form temporarily places it in an 'editing' state; if an edit is saved that causes the template to fail validation, its status must automatically revert to 'draft'.
+    3.  The **"Duplicate"** function is available for any template to create a new 'draft' copy. When a new version is activated from a duplicate, the system may prompt the user to optionally archive the older version.
+    4.  A form template with an **'assigned'** status **cannot be edited or archived**. Its status reverts to 'active' only after the `end_date_time` of the period it was assigned to has passed.
+    5.  From the main list of templates, each 'active' template must have an **'Assign to Period'** action button that takes me directly to the 'Period Assignment' creation page with that template pre-selected.
 
 **Story 3.5: Assigning Forms to Evaluation Periods**
 
--   **As an** Admin, **I want** to assign a default form template to an academic term and have the option to assign different templates for specific departments, **so that** I can launch a flexible and nuanced evaluation period.
+-   **As an** Admin, **I want** to create and edit a scheduled evaluation period by assigning forms to evaluator groups, **so that** I can launch a clear and controlled evaluation.
 -   **Acceptance Criteria:**
-    1.  On the "Evaluation Management" page, I can create a new "Period Assignment."
-    2.  I must select a `school_term` and an `assessment_period` ('midterm' or 'finals').
-    3.  I must select a **default** active form template from a dropdown that will apply to all departments not given a specific override. The dropdown only shows templates with an 'active' status.
-    4.  The UI provides an optional action, such as an "Add Department Override" button.
-    5.  When adding an override, I can select a specific department and then select a different active form template to assign to it.
-    6.  The system must perform a validation check to ensure that any selected override form template contains the same "common core criteria" as the default form template. An error message is displayed if this rule is violated.
-    7.  I must set a specific `start_date_time` and `end_date_time` for the evaluation window.
-    8.  I can configure the "Minimum Submission Time" in seconds for this evaluation period, which defaults to 45.
-    9.  If the selected form template includes open-ended questions, I can configure the 'Minimum' and 'Maximum' word count for responses, which will have sensible system defaults (e.g., 5 and 300).
-    10. The system prevents the creation of a duplicate assignment for the same university, term, and period.
-    11. Upon successful assignment, the status of all selected form templates (both default and overrides) is updated from 'active' to 'assigned'.
+    1.  On the "Evaluation Management" page, I can create or edit a Period Assignment. Any attempt to delete a dependent resource for an assigned period must be prevented.
+    2.  The UI must gracefully handle cases where no 'active' forms are available by showing a helpful message and a link to the form creation page.
+    3.  I must select a `school_term`, `assessment_period`, `start_date_time`, and `end_date_time`.
+    4.  The system **must prevent** saving if the `start_date_time` is in the past or if the `end_date_time` is not after the `start_date_time`.
+    5.  I must select a primary, **active form template** for **Student** evaluators using a clearly labeled dropdown ("Select Primary Form (for Students)").
+    6.  Optionally, I can assign a second, different active form template for **Department Head** evaluators using a clearly labeled dropdown.
+    7.  Before finalizing, the system must display a **visually explicit confirmation summary** of the assignment details. A "Share Read-Only Preview Link" button will be available on this summary for optional, external stakeholder sign-off.
+    8.  I can edit any details of a Period Assignment at any time **before** its `start_date_time`. If I am editing a period when its start time passes, the system must prevent the save and inform me that the period is now active and locked.
+    9.  Any "Delete" action on a planned period must trigger a confirmation dialog.
+    10. Upon successful assignment, the status of the selected form template(s) is updated to 'assigned'.
+
+**Story 3.6: Emergency Period Cancellation** (New Story)
+
+-   **As an** Admin, **I want** to cancel an evaluation period that has already started, **so that** I have an emergency procedure to correct a critical error (e.g., wrong form assigned).
+-   **Acceptance Criteria:**
+    1.  For any "active" evaluation period, an emergency "Cancel Period" action is available.
+    2.  Initiating this action requires the Admin to provide a brief, user-facing reason for the cancellation.
+    3.  Upon confirmation, the system marks the period and all its associated submissions as 'cancelled' and 'invalid', ensuring they are excluded from all reporting.
+    4.  The system triggers an automated, anonymous notification to all affected evaluators, informing them of the cancellation and providing the Admin's reason.
+    5.  After cancellation, the Admin is able to create a new, correct Period Assignment for the same term.
+    6.  _Dev Note:_ This action must gracefully handle concurrent requests from multiple admins on a "first-come, first-served" basis.
 
 #### **Epic 4: The Core Evaluation & Data Integrity Loop**
 
@@ -413,19 +416,21 @@ The architecture will be a **simple monolith** consisting of a single FastAPI ba
 
 **Story 4.5b: Flagged Evaluation Processing**
 
--   **As an** Admin, while viewing a flagged evaluation, **I want** to be able to Approve, Reject, or Request Resubmission, **so that** I can process the queue and maintain data integrity.
+-   **As an** Admin, while viewing a flagged evaluation, **I want** to be able to Approve, Archive, or Request Resubmission, **so that** I can process the queue and maintain data integrity.
 -   **Acceptance Criteria:**
-    1.  From the detailed view, I have three actions: **Approve**, **Reject**, or **Request Resubmission**.
+    1.  From the detailed view, I have three actions: **Approve**, **Archive**, or **Request Resubmission**.
     2.  Choosing **"Approve"** resolves the flag and ensures the submission data is included in all aggregate calculations.
-    3.  Choosing **"Reject"** permanently deletes the evaluation submission and all its associated answers. The data will be excluded from all aggregate calculations, and an anonymous notification with the reason is sent to the student.
-    4.  Choosing **"Request Resubmission"** marks the original submission as invalid (to be excluded from calculations) and triggers an anonymous notification for the student to submit a new evaluation.
+    3.  Choosing **"Archive"** marks the submission as 'archived' and excludes it from all aggregate calculations. The submission is soft-deleted and recoverable for 30 days.
+    4.  Archiving a submission requires the Admin to provide a reason, which is included in the anonymous notification sent to the student.
+    5.  Choosing **"Request Resubmission"** marks the original submission as invalid (to be excluded from calculations) and triggers an anonymous notification for the student to submit a new evaluation.
+    6.  _Dev Note:_ All actions on a flagged evaluation must gracefully handle concurrent requests from multiple admins.
 
 **Story 4.6: Viewing Resolved Flags**
 
 -   **As an** Admin, **I want** to be able to view a history of evaluations that I have already resolved, **so that** I can maintain an audit trail and reference past decisions.
 -   **Acceptance Criteria:**
     1.  The flagged evaluations dashboard has a separate tab or filter to view 'Resolved' items.
-    2.  The resolved list shows the submission details, the original flag reason, the action taken (Approved, Rejected, etc.), who resolved it, and the date of resolution.
+    2.  The resolved list shows the submission details, the original flag reason, the action taken (Approved, Archived, etc.), who resolved it, and the date of resolution.
     3.  This view is read-only.
 
 #### **Epic 5: Data Processing & Insights Visualization**
@@ -484,29 +489,24 @@ The architecture will be a **simple monolith** consisting of a single FastAPI ba
 
 -   **As a** User (Faculty, Department Head, or Admin), **I want** to view the processed and aggregated evaluation results on my role-specific dashboard, **so that** I can gain clear, visual insights into performance.
 -   **Acceptance Criteria:**
-    1.  The API must implement a **hybrid data retrieval strategy**:
-        -   For finalized/locked evaluation periods (`is_final_snapshot` = true), data must be fetched directly from the aggregate tables for historical performance.
-        -   For the current, provisional evaluation period, data must be calculated on-the-fly from the raw submission tables and the results must be cached (leveraging Redis) to provide near real-time dashboard updates.
-    2.  The API logic for institutional and cross-departmental dashboards must ensure that only the shared, **"common core criteria"** are used for aggregations and comparisons.
-    3.  When a user drills down into a specific department's results where an override form was used, the API must provide data for **all criteria**, including both the core and department-specific ones.
-    4.  The main dashboard must display a **word cloud** of keywords. By default, it shows a "combined" view. A user action (e.g., a toggle) must allow switching to a "detailed" view presenting three separate word clouds for **positive, neutral, and negative** keywords.
-    5.  The dashboard must display **bar charts** for sentiment and numerical breakdowns. The default is a "side-by-side" layout. A user action must switch to a "detailed" vertical layout that includes specific KPIs:
-        -   **Qualitative KPIs:** Display the count and percentage for each sentiment category, along with the top three keywords associated with each.
-        -   **Quantitative KPIs:** Display the overall quantitative score, the highest and lowest rated criteria with their scores, and a comparison metric showing the change from the previous evaluation period.
-    6.  The **Department Head and Admin dashboards** must implement the "mode-switching" functionality, allowing them to view aggregated data for a whole department or drill down to a specific faculty member's results.
-    7.  All visualizations must clearly indicate when data is **"Provisional"** versus **"Final."**
-    8.  All dashboards must clearly label and visually distinguish between analytics derived from **'Imported Historical Data'** versus **'Live Proficiency Data'.**
+    1.  The API must implement a **hybrid data retrieval strategy**: For finalized/locked evaluation periods, data is fetched from aggregate tables; for the current, provisional period, data is calculated on-the-fly and cached.
+    2.  The main dashboard must display a **word cloud** of keywords, with a user action to switch between a "combined" view and separate views for **positive, neutral, and negative** keywords.
+    3.  The dashboard must display **bar charts** for sentiment and numerical breakdowns, with a user action to switch between a "side-by-side" layout and a "detailed" vertical layout with specific KPIs.
+    4.  The **Department Head and Admin dashboards** must implement the "mode-switching" functionality, allowing them to view aggregated data for a whole department or drill down to a specific faculty member's results.
+    5.  To protect evaluator anonymity, the UI must prevent the viewing of raw open-ended comments associated with a chart or data point unless the total number of underlying responses meets a defined minimum threshold of 3 or more.
+    6.  All visualizations must clearly indicate when data is **"Provisional"** versus **"Final."**.
+    7.  All dashboards must clearly label and visually distinguish between analytics derived from **'Imported Historical Data'** versus **'Live Proficiency Data'**.
 
 **Story 5.6: Evaluation Report Generation and Export**
 
--   **As a** User (Faculty, Department Head, or Admin), **I want** to access a dedicated reports page to generate and download comprehensive evaluation results, **so that** I can easily archive, share, and analyze data offline in a structured manner.
+-   **As a** User (Faculty, Department Head, or Admin), **I want** to use a "Report Center" to generate, track, and download comprehensive evaluation results, **so that** I can easily archive and analyze data offline.
 -   **Acceptance Criteria:**
-    1.  A "Download Reports" link shall be present in the main side navigation panel, leading to a dedicated report generation page.
-    2.  On the reports page, the user is presented with the same filter and view/mode controls available on their main dashboard.
-    3.  After setting the desired filters, the user can select an export format: **PDF** or **CSV/Excel**.
-    4.  For **PDF format**, the backend must use the **WeasyPrint** library to generate a professionally formatted document containing the key data visualizations and summary tables based on the selected filters.
-    5.  For **CSV/Excel format**, the backend must use the **pandas** library to generate a well-structured file containing the detailed aggregated numerical and sentiment scores.
-    6.  The generated file is returned to the user, initiating a download in their browser.
+    1.  A "Report Center" link in the side navigation leads to a dedicated page with two main areas: "Generate Report" and "My Reports".
+    2.  The "Generate Report" area allows a user to select a predefined report type and apply relevant filters.
+    3.  The system will use smart logic to either generate simple reports synchronously (immediate download) or enqueue complex reports as an asynchronous background job.
+    4.  The "My Reports" area acts as an inbox, listing all generated reports with their status (e.g., 'Generating', 'Ready', 'Failed').
+    5.  Users receive a notification when an asynchronous report is ready and can download it from the "My Reports" list.
+    6.  The system supports exporting reports in both **PDF** (via WeasyPrint) and **CSV/Excel** (via pandas) formats.
 
 #### **Epic 6: AI-Powered Actionable Intelligence**
 
@@ -561,6 +561,6 @@ The architecture will be a **simple monolith** consisting of a single FastAPI ba
 
 This document provides the complete requirements for the "Proficiency" application.
 
--   **For the Architect (`*agent architect`):** Please use this PRD as the primary input to create the `fullstack-architecture.md` document. Pay close attention to the technical assumptions in Section 4 and the detailed data flow implied by the stories in Epics 5 and 6.
+-   **For the Architect (`*agent architect`):** Please use this PRD as the primary input to create the `fullstack-architecture.md` document.
 
 -   **For the Product Owner (`*agent po`):** Please use the `po-master-checklist` to perform a final validation of this document for completeness and consistency before the Architect begins their work.
