@@ -45,58 +45,6 @@ The interface must feel clean, trustworthy, and represent a significant upgrade 
 | 2025-09-28 | 1.1     | Expanded introduction with developer-focused notes.                                                                                                                                                     | Sally, UX Expert |
 | 2025-09-28 | 1.0     | Initial draft of the UI/UX Specification.                                                                                                                                                               | Sally, UX Expert |
 
-#### **Notes for Project Manager (PRD Alignment)**
-
-**To: John, Project Manager**
-**From: Sally, UX Expert**
-
-The following functional requirements and scope changes were identified during the UX specification and elicitation process. Please review and incorporate them into the `prd.md` to ensure our core documents remain aligned.
-
-1.  **EXPANSION of Job Monitoring (Impacts PRD Story 2.2):**
-
-    -   **Change:** The original "Import Job Monitoring" feature (Story 2.2) is insufficient. Our risk analysis revealed the need for a centralized **"Background Job Monitor"** for _all_ asynchronous tasks (imports, period cancellations, report generation).
-    -   **Recommendation:** Please update Story 2.2 in the PRD. Broaden its scope from just imports to a general job monitor. Add a new acceptance criterion for this story: _"As an Admin, I want to be able to 'Force Fail' a job that is stuck, so that I can resolve a system deadlock."_
-
-2.  **REFINEMENT of Emergency Cancellation (Impacts PRD Story 3.6):**
-
-    -   **Change:** To mitigate communication risks, the UX for the "Emergency Period Cancellation" (Story 3.6) has been changed from a free-text "reason" field to a **mandatory dropdown of pre-defined reasons**.
-    -   **Recommendation:** Please update the acceptance criteria for Story 3.6 in the PRD to reflect that the user-facing reason is selected from a list, not typed freely. You may also want to note the UX includes a 10-second "Undo" feature for context.
-
-3.  **RECOMMENDED Story Breakdown (from PO Perspective):**
-
-    -   **Observation:** The "Emergency Period Cancellation" feature (Story 3.6) has evolved through our elicitation process into a more complex and robust feature than originally scoped.
-    -   **Recommendation:** To manage this complexity and ensure incremental delivery, please consider breaking down the original PRD story into smaller, more focused stories in the backlog. A potential breakdown could be:
-        1.  `Backend: Implement Core Asynchronous Cancellation Job`
-        2.  `Frontend: Build Cancellation Dialog and 'Undo' Toast`
-        3.  `Feature: Expand Job Monitor to include 'Force Fail' capability`
-
-4.  **RECOMMENDED Process Actions (from SM Perspective):**
-    -   **Dependency:** The "Force Fail" feature is dependent on the "Background Job Monitor" (expanded from Story 2.2). Please ensure these stories are sequenced correctly in the backlog.
-    -   **Technical Spike:** Due to the technical complexity of the cancellable, delayed job for the "Undo" feature, it is strongly recommended to schedule a **technical spike** for the development team. This will allow them to create a proof-of-concept and provide a more accurate estimate before committing to the full implementation story in a sprint.
-5.  **NEW Functional Requirement: Registration Code Usage Limits:**
-
-    -   **Context:** The self-registration flow will now use a general "Registration Code" per university. A new requirement has been identified: Admins must be able to control onboarding volume by setting a usage limit on this code.
-    -   **Recommendation:** Please add a new Functional Requirement to the `prd.md`. For example: _"FR10: Registration Code Management - Admins shall be able to set, view, and update the maximum usage limit for their university's self-registration code."_
-
-6.  **NEW Functional Requirement: Role-Specific Registration Codes:**
-
-    -   **Context:** A critical requirement was clarified: to ensure data integrity and security, self-registration codes must be specific to a user role (e.g., a "Student" code and a separate "Faculty" code). The registration process must validate the user's selected role against the code's intended role.
-    -   **Recommendation:** Please add a new Functional Requirement to the `prd.md`. For example: _"FR11: Role-Based Registration Codes - The system must support the generation of distinct self-registration codes for different user roles. The registration process must validate that the user's selected role matches the intended role of the code provided."_
-
-7.  **NEW Product Rule - "One Resubmission" Limit:**
-
-    -   **Context:** To prevent student frustration, we've specified that a flagged evaluation can only be sent back for resubmission once. If the second attempt is still unsatisfactory, it must either be approved or archived.
-    -   **Recommendation:** Please update the PRD, likely in the acceptance criteria for Story 4.5b, to reflect this system rule.
-
-8.  **NEW Functional Detail - Highlight Flagged Text for Students:**
-
-    -   **Context:** To make the resubmission process more actionable for students, the UX specifies that the exact text that caused a flag (e.g., for "Recycled Content") will be highlighted on their resubmission form.
-    -   **Recommendation:** Please add this detail to the relevant acceptance criteria in the PRD to ensure the backend API supports providing this information to the frontend.
-
-9.  **NEW Product Rule - Resubmission Grace Period:**
-    -   **Context:** We identified a deadlock scenario where a resubmission could be requested after the main evaluation period has closed.
-    -   **Recommendation:** Please add a new Functional or Non-Functional Requirement to the PRD to define a "resubmission grace period" (e.g., 48 hours) that allows a student to resubmit their work even if the parent evaluation period is no longer active.
-
 ---
 
 ### **Section 2: Information Architecture (IA)**
