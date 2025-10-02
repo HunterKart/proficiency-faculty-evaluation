@@ -1,3 +1,6 @@
+Of course. Here is the final and complete Product Requirements Document, **Version 6.2**, with all approved updates, refinements, and acceptance criteria integrated.
+
+```markdown
 # Proficiency Product Requirements Document (PRD)
 
 ---
@@ -22,6 +25,8 @@ Existing faculty evaluation systems, particularly within the Philippines and at 
 
 | Date       | Version | Description                                                                                                                                    | Author   |
 | :--------- | :------ | :--------------------------------------------------------------------------------------------------------------------------------------------- | :------- |
+| 2025-10-02 | 6.2     | Final version with complete Acceptance Criteria for all new stories, refined through elicitation. PRD is finalized.                            | John, PM |
+| 2025-10-02 | 6.1     | Applied structural changes and new requirements based on alignment with front-end-spec v2.0.                                                   | John, PM |
 | 2025-10-02 | 6.0     | Final PRD incorporating all refinements from the completed elicitation process. PRD is now locked and ready for architecture.                  | John, PM |
 | 2025-10-02 | 5.0     | Final PRD incorporating all elicitation refinements and multi-admin concurrency controls. Ready for architecture.                              | John, PM |
 | 2025-10-02 | 4.0     | Final version incorporating all elicitation refinements. Removed overrides, added safeguards (Cancel Period, Timezone), and improved UX flows. | John, PM |
@@ -74,6 +79,9 @@ Existing faculty evaluation systems, particularly within the Philippines and at 
     -   Admins shall have the ability to bulk import historical university data via CSV/Excel to prime the system.
     -   The import process must support: **Academic Structure** (departments, programs, subjects), **User & Enrollment Records**, and **Past Evaluation Submissions** (including Likert and open-ended answers).
     -   All imported historical evaluation records must be processed by the system's data analysis pipeline (as defined in FR5 and FR6).
+-   **FR10: Registration Code Management**: Admins shall be able to set, view, and update the maximum usage limit for their university's self-registration code.
+-   **FR11: Role-Based Registration Codes**: The system must support the generation of distinct self-registration codes for different user roles. The registration process must validate that the user's selected role matches the intended role of the code provided.
+-   **FR12: Resubmission Grace Period**: A "resubmission grace period" of 48 hours shall be granted to a student for a flagged evaluation, allowing them to resubmit their work even if the parent evaluation period is no longer active.
 
 #### **Non-Functional Requirements**
 
@@ -242,56 +250,72 @@ The architecture will be a **simple monolith** consisting of a single FastAPI ba
 
 **Stories:**
 
-1.  **`Story 2.1: Manual Academic Structure Management`**
+**Story 2.1: Manual Academic Structure Management**
 
-    -   _As an Admin, I want a dedicated interface to manually create, view, update, and manage individual academic structure items, so that I can make granular additions or corrections without needing to perform a bulk import._
-    -   **Acceptance Criteria:**
-        1.  The Admin dashboard contains a new "Academic Structure" management area.
-        2.  Within this area, the Admin can perform full CRUD operations for **Departments, Programs, and Subjects.**
-        3.  The UI enforces all relationships and constraints defined in the database schema.
-        4.  All changes are logged for auditing purposes.
+-   **As an** Admin, **I want** a dedicated interface to manually create, view, update, and manage individual academic structure items, **so that** I can make granular additions or corrections without needing to perform a bulk import.
+-   **Acceptance Criteria:**
+    1.  The Admin dashboard contains a new "Academic Structure" management area.
+    2.  Within this area, the Admin can perform full CRUD operations for **Departments, Programs, and Subjects.**
+    3.  The UI enforces all relationships and constraints defined in the database schema.
+    4.  All changes are logged for auditing purposes.
 
-2.  **`Story 2.2: Import Job Monitoring`**
+**Story 2.2: Background Job Monitoring Dashboard**
 
-    -   _As an Admin, I want a simple dashboard to view the status of my active and past import jobs, so that I can track progress and access results or error reports._
-    -   **Acceptance Criteria:**
-        1.  A new "Import History" page is added to the Admin dashboard.
-        2.  The page lists all initiated import jobs with their status.
-        3.  The 'Import History' table must display: **Job Type**, **Source Filename**, **Submitted At**, **Status**, and a **Details/Download** link.
-        4.  The table must support pagination.
-        5.  For a `Failed` job, the 'Details/Download' link must trigger the download of a report that contains the original row data plus an 'Error' column explaining the validation failure.
-        6.  The page must include a 'Cancel' button for any job that is still in `Queued` or `Processing`.
-    -   **Dev Note:** The import job lifecycle must include the statuses: `Queued`, `Validating`, `Processing`, `Completed`, `Failed`, `Cancelled`.
+-   **As an** Admin, **I want** a centralized dashboard to view the status of all my background jobs (including data imports, report generation, and period cancellations), **so that** I can track progress and diagnose failures.
+-   **Acceptance Criteria:**
+    1.  A new "Job Monitor" page is added to the Admin dashboard, replacing the "Import History" page.
+    2.  The page lists all initiated background jobs with their status.
+    3.  The table must display: **Job Type**, **Source Filename** (if applicable), **Submitted At**, **Status**, and a **Details/Download** link.
+    4.  The table must support pagination.
+    5.  For a `Failed` job, the 'Details/Download' link must trigger the download of a report that contains the original row data plus an 'Error' column explaining the validation failure.
+    6.  The page must include a 'Cancel' button for any job that is still in `Queued`.
+-   **Dev Note:** The job lifecycle must include the statuses: `Queued`, `Processing`, `Completed`, `Failed`, `Cancelled`.
 
-3.  **`Story 2.3: Academic Structure Bulk Import`**
+**Story 2.3: Academic Structure Bulk Import**
 
-    -   _As an Admin, I want to bulk import the university's entire academic structure from a CSV file, so that I can rapidly set up the foundational hierarchy._
-    -   **Acceptance Criteria:**
-        1.  The "Academic Structure" management area includes a "Bulk Import" feature.
-        2.  A downloadable CSV template is provided.
-        3.  The asynchronous job validates the uploaded CSV, returning a comprehensive error report if issues are found, and does not proceed until errors are resolved.
-        4.  A successful import correctly populates all relevant academic structure tables and is idempotent.
-        5.  The admin receives a notification and the job status is updated on the "Import History" page.
-    -   **Dev/QA Notes:** The Architect must define the precise CSV format. The asynchronous validation must prevent web server timeouts. QA will require 'bad' CSV files for testing.
+-   **As an** Admin, **I want** to bulk import the university's entire academic structure from a CSV file, **so that** I can rapidly set up the foundational hierarchy.
+-   **Acceptance Criteria:**
+    1.  The "Academic Structure" management area includes a "Bulk Import" feature.
+    2.  A downloadable CSV template is provided.
+    3.  The asynchronous job validates the uploaded CSV, returning a comprehensive error report if issues are found, and does not proceed until errors are resolved.
+    4.  A successful import correctly populates all relevant academic structure tables and is idempotent.
+    5.  The admin receives a notification and the job status is updated on the "Job Monitor" page.
+-   **Dev/QA Notes:** The Architect must define the precise CSV format. The asynchronous validation must prevent web server timeouts. QA will require 'bad' CSV files for testing.
 
-4.  **`Story 2.4: Historical User & Enrollment Bulk Import`**
+**Story 2.4: Historical User & Enrollment Bulk Import**
 
-    -   _As an Admin, I want to bulk import historical user and enrollment data from CSV files, so that past academic records are accurately reflected in the system._
-    -   **AC & Notes:** Follows the same structure as Story 2.3 for importing users and enrollments.
+-   **As an** Admin, **I want** to bulk import historical user and enrollment data from CSV files, **so that** past academic records are accurately reflected in the system.
+-   **AC & Notes:** Follows the same structure as Story 2.3 for importing users and enrollments.
 
-5.  **`Story 2.5: Historical Evaluation Records Bulk Import`**
+**Story 2.5: Historical Evaluation Records Bulk Import**
 
-    -   _As an Admin, I want to bulk import past evaluation records (both numerical and open-ended) from a CSV file, so that historical feedback is available for analysis._
-    -   **AC & Notes:** Follows the same structure as Story 2.3 for importing historical evaluations.
+-   **As an** Admin, **I want** to bulk import past evaluation records (both numerical and open-ended) from a CSV file, **so that** historical feedback is available for analysis.
+-   **AC & Notes:** Follows the same structure as Story 2.3 for importing historical evaluations.
 
-6.  **`Story 2.6: Fine-Tune Sentiment Analysis Model for Cebuano & Code-Switching`**
-    -   _As a System/Data Scientist, I want the primary sentiment analysis model (XLM-RoBERTa) to be fine-tuned on Cebuano and code-switched language, so that its predictions are accurate and reliable._
-    -   **Acceptance Criteria:**
-        1.  The fine-tuning script must be designed to consume a **pre-curated and labeled dataset** of evaluation records. The manual task of curating this dataset is a prerequisite.
-        2.  The script can be executed via a CLI command.
-        3.  The fine-tuned model must achieve its target accuracy metric on a held-out test set.
-        4.  The final, versioned model artifact is integrated into the RQ worker environment.
-    -   **Dev/QA Notes:** The Architect must define the storage location for model artifacts. QA must have access to logs to verify accuracy. A post-import validation script must be created to check for data integrity (e.g., orphaned records) before this epic is considered complete.
+**Story 2.6: Fine-Tune Sentiment Analysis Model for Cebuano & Code-Switching**
+
+-   **As a** System/Data Scientist, **I want** the primary sentiment analysis model (XLM-RoBERTa) to be fine-tuned on Cebuano and code-switched language, **so that** its predictions are accurate and reliable.
+-   **Acceptance Criteria:**
+    1.  The fine-tuning script must be designed to consume a **pre-curated and labeled dataset** of evaluation records. The manual task of curating this dataset is a prerequisite.
+    2.  The script can be executed via a CLI command.
+    3.  The fine-tuned model must achieve its target accuracy metric on a held-out test set.
+    4.  The final, versioned model artifact is integrated into the RQ worker environment.
+-   **Dev/QA Notes:** The Architect must define the storage location for model artifacts. QA must have access to logs to verify accuracy. A post-import validation script must be created to check for data integrity (e.g., orphaned records) before this epic is considered complete.
+
+**Story 2.7: Stuck Job Intervention**
+
+-   **As an** Admin, **I want** to be able to 'Force Fail' a job that appears to be stuck in a 'Processing' state, **so that** I can resolve a system deadlock and investigate the issue.
+-   **Dev Notes:**
+    -   **Implementation Pattern:** The implementation should aim to create a generic, reusable pattern for the 'Force Fail' cleanup logic to avoid bespoke code for each job type.
+    -   **Process Recommendation:** A technical spike is highly recommended for the riskiest parts of this feature (e.g., process termination and transaction rollbacks) to de-risk the main implementation.
+-   **Acceptance Criteria:**
+    -   **User Interaction**
+        1.  The 'Force Fail' button on the 'Job Monitor' dashboard shall only become visible for a job in the 'Processing' state after a minimum configurable duration (e.g., 5 minutes) has passed.
+        2.  Clicking 'Force Fail' must trigger a confirmation dialog explaining the action's consequences.
+        3.  The UI on the "Job Monitor" page must update in near real-time to reflect the job's final 'Failed' status after the action is complete.
+    -   **Core Backend Logic** 4. Upon confirmation, the backend must update the job's status to 'Failed'. The audit log for this event must be highly detailed, recording: the job ID, the admin who initiated the action, the job's runtime duration before termination, and the last known step or progress of the job if available. 5. The implementation must guarantee that forcing a job to fail also safely terminates the underlying worker process executing that job, preventing 'zombie' processes.
+    -   **Safety & Resilience** 6. The 'Force Fail' mechanism must ensure that the job's operations are handled transactionally where possible. The backend logic must attempt to gracefully terminate and roll back any active database transaction to prevent data corruption. 7. If the force-failed job was managing a primary entity's status (e.g., a `period_cancellation_job`), the entity's status must be automatically reverted to its last known stable state (e.g., from 'Cancelling...' back to 'Active'). 8. After a 'Force Fail' is executed, the backend must perform a verification check to confirm that associated resources have been successfully reverted to a stable state. If this verification fails, the job must be moved to a special 'Cleanup Failed' state and flagged for immediate Super Admin review.
+    -   **Testability** 9. In a non-production environment, a debug mechanism or test-only API endpoint must be created to allow a QA agent to simulate a stuck job, enabling verification of the entire 'Force Fail' workflow.
 
 #### **Epic 3: Administrative Control Panel**
 
@@ -353,16 +377,52 @@ _UX Note: To improve the first-time user experience, the "Evaluation Management"
     9.  Any "Delete" action on a planned period must trigger a confirmation dialog.
     10. Upon successful assignment, the status of the selected form template(s) is updated to 'assigned'.
 
-**Story 3.6: Emergency Period Cancellation** (New Story)
+**Story 3.6: Frontend - Initiate Period Cancellation**
 
--   **As an** Admin, **I want** to cancel an evaluation period that has already started, **so that** I have an emergency procedure to correct a critical error (e.g., wrong form assigned).
+-   **As an** Admin, **I want** to initiate an emergency period cancellation from the UI by selecting a pre-defined reason and confirming the action, **so that** I can safely correct a critical error.
 -   **Acceptance Criteria:**
-    1.  For any "active" evaluation period, an emergency "Cancel Period" action is available.
-    2.  Initiating this action requires the Admin to provide a brief, user-facing reason for the cancellation.
-    3.  Upon confirmation, the system marks the period and all its associated submissions as 'cancelled' and 'invalid', ensuring they are excluded from all reporting.
-    4.  The system triggers an automated, anonymous notification to all affected evaluators, informing them of the cancellation and providing the Admin's reason.
-    5.  After cancellation, the Admin is able to create a new, correct Period Assignment for the same term.
-    6.  _Dev Note:_ This action must gracefully handle concurrent requests from multiple admins on a "first-come, first-served" basis.
+    1.  A 'Cancel Period' action button is visible and enabled on the "Form & Period Management" page for any evaluation period that has an 'Active' status.
+    2.  Clicking the 'Cancel Period' action must open a confirmation dialog designed for destructive actions.
+    3.  The dialog must require the Admin to select a reason from a pre-defined dropdown list. If the 'Other (requires internal note)' option is selected, a text area for internal notes must become visible and mandatory.
+    4.  The final 'Confirm Cancellation' button in the dialog must remain disabled until the Admin types the exact word 'CANCEL' into a confirmation text field.
+    5.  Upon successful confirmation in the dialog, a non-blocking API call is made to the backend to enqueue the cancellation job.
+    6.  Immediately after the API call is initiated, the UI must display a temporary "toast" notification with the message "Period is being cancelled..." and a clickable 'Undo' button that is visible for 10 seconds.
+    7.  Simultaneously, the status of the corresponding period in the UI list must change to a transitional 'Cancelling...' state, and all actions (like 'Edit' or 'Cancel Period') for that row must be disabled.
+    8.  If the 'Undo' button is clicked within the 10-second window, a separate API call must be triggered to cancel the queued job. On success, the UI should display a confirmation toast (e.g., "Cancellation aborted") and revert the period's status in the list back to 'Active'.
+
+**Story 3.7: Admin Management of Role-Specific Registration Codes**
+
+-   **As an** Admin, **I want** to create, view, and manage role-specific registration codes, including setting and updating their maximum usage limits, **so that** I can control the user onboarding process.
+-   **Developer Notes:**
+    -   **Implementation Pattern:** The implementation should aim to create a generic, reusable pattern for the 'Force Fail' cleanup logic to avoid bespoke code for each job type.
+    -   **Process Recommendation:** A technical spike is highly recommended for the riskiest parts of this feature (e.g., race condition handling) to de-risk the main implementation.
+-   **Acceptance Criteria:**
+    -   **Admin Interface & Functionality**
+        1.  A "Registration Code Management" interface is available within the Admin's "User Management" page.
+        2.  The interface displays a list of all registration codes, showing the code, its intended role, its usage count (`Current Uses / Max Uses`), and a status toggle (Active/Inactive).
+        3.  An Admin can activate or deactivate a code using the status toggle.
+        4.  An Admin can create a new code by selecting a role, setting a 'Max Uses' limit, and optionally setting an expiration date.
+        5.  An Admin can regenerate an existing code, which archives the old one and creates a new one with the same role and limits.
+        6.  An Admin can update the "Max Uses" limit for an existing code.
+    -   **Security & Validation** 7. Registration codes must be generated as non-sequential, random, and sufficiently complex strings (e.g., `UNIV-ROLE-A4B8-C1D9`) to prevent guessing. 8. The API endpoints for code validation and user registration must be protected by a rate limiter to prevent rapid, automated account creation attempts. 9. When an admin attempts to update the 'Max Uses' for a code, the system must validate that the new value is not less than the 'Current Uses' and show an error if it is. 10. A deactivated or expired code cannot be used for new registrations.
+    -   **Data Integrity & Traceability** 11. When a user successfully registers, the system must store a reference to the `registration_code_id` in the new user's record, creating a permanent, traceable link. 12. The process for checking and incrementing the 'Current Uses' of a code must be atomic to prevent race conditions from breaching the 'Max Uses' limit.
+
+**Story 3.8: Backend - Process Asynchronous Period Cancellation**
+
+-   **As a** System, **I want** to process a period cancellation as a delayed, asynchronous background job, **so that** all data is invalidated correctly, notifications are sent, and the Admin has a brief window to undo the action.
+-   **Dev Notes & QA Notes:**
+    -   **Idempotency:** The developer must implement idempotency by checking the state before acting and targeting only unprocessed records in queries.
+    -   **Testing:** QA must create an automated integration test to verify the "undo" window functionality by calling the start and undo endpoints within the specified time limits.
+-   **Acceptance Criteria:**
+    1.  A successful API request from Story 3.6 must enqueue a new job in the RQ (Redis Queue) worker.
+    2.  The enqueued job must have an initial execution delay of at least 15 seconds to create a server-side window for a potential 'Undo' action.
+    3.  The system must provide a dedicated API endpoint that allows the frontend to cancel the job from the queue, but only if the job has not yet started executing.
+    4.  After the delay (and if not cancelled), the job's first action is to update the `evaluation_periods` record's status to the transitional 'Cancelling...' state, effectively locking it.
+    5.  The job must process all associated submissions in idempotent batches. The batch size **must be configurable via an environment variable** (e.g., `CANCELLATION_JOB_BATCH_SIZE`) with a **sensible default value (e.g., 500)**. If the job fails and is retried, it must gracefully handle records that are already in the correct 'cancelled' state without error.
+    6.  After successfully invalidating all submissions, the job must enqueue the required notifications in **idempotent batches**. The process must track which notifications have been enqueued to ensure that if the job is retried, it **does not send duplicate notifications**.
+    7.  Once all tasks are complete, the job must update the `evaluation_periods` record's final status to 'Cancelled' and mark itself as successfully completed.
+    8.  If the job fails for any reason after it has started processing, it must be moved to RQ's 'failed' queue, and the period's status must remain 'Cancelling...' to signal that a manual review is required.
+    9.  The entire cancellation job must be designed to be idempotent. If the job is interrupted and retried, it must be able to resume from the start and still produce the correct final state without duplicating actions or causing errors.
 
 #### **Epic 4: The Core Evaluation & Data Integrity Loop**
 
@@ -405,6 +465,7 @@ _UX Note: To improve the first-time user experience, the "Evaluation Management"
     2.  The background job compares the submitted open-ended text against **that same evaluator's** previous submissions across all evaluation periods.
     3.  If the text has over 95% similarity to one of their previous submissions, a "Recycled Content" flag is created for the evaluation.
     4.  The notification sent to the student for recycled content must clearly explain that reused text was detected and state the importance of providing original feedback for each unique evaluation.
+-   **`Dev Note:`** The API response for a resubmission request must include data identifying the specific text fragment(s) that triggered the flag to enable frontend highlighting.
 
 **Story 4.5a: Flagged Evaluation Dashboard (View Only)**
 
@@ -424,6 +485,8 @@ _UX Note: To improve the first-time user experience, the "Evaluation Management"
     4.  Archiving a submission requires the Admin to provide a reason, which is included in the anonymous notification sent to the student.
     5.  Choosing **"Request Resubmission"** marks the original submission as invalid (to be excluded from calculations) and triggers an anonymous notification for the student to submit a new evaluation.
     6.  _Dev Note:_ All actions on a flagged evaluation must gracefully handle concurrent requests from multiple admins.
+    7.  The system must prevent a 'Request Resubmission' action on an evaluation that has already been resubmitted once. If a second submission is still unsatisfactory, the Admin's only options are 'Approve' or 'Archive'.
+    8.  A resubmission can be completed by the student within the 48-hour grace period defined in FR12.
 
 **Story 4.6: Viewing Resolved Flags**
 
@@ -559,8 +622,9 @@ _UX Note: To improve the first-time user experience, the "Evaluation Management"
 
 ### **Next Steps**
 
-This document provides the complete requirements for the "Proficiency" application.
+This document (Version 6.2) provides the complete and aligned requirements for the "Proficiency" application.
 
 -   **For the Architect (`*agent architect`):** Please use this PRD as the primary input to create the `fullstack-architecture.md` document.
 
 -   **For the Product Owner (`*agent po`):** Please use the `po-master-checklist` to perform a final validation of this document for completeness and consistency before the Architect begins their work.
+```
