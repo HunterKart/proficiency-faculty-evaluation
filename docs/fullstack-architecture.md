@@ -121,270 +121,237 @@ graph TD
 
 This section defines the core data models for the system, derived from the provided Data Dictionary.
 
-### Core Tenant and User Models
+#### 0) Conventions & Principles
 
-#### Model: University
+**Naming**
+- Primary keys: `snake_case_id` (e.g., `evaluation_period_id`).
+- Foreign keys mirror the source PK name (e.g., `university_registration_request_id`).
+- Timestamps: every table has `created_at`, `updated_at`; use `deleted_at` when soft delete semantics exist.
 
--   **Purpose:** The authoritative table for all onboarded institutions, serving as the primary tenant record.
--   **Key Attributes:**
-    -   [cite\_start]`university_id` (int, PK): Unique identifier for the university[cite: 1514].
-    -   [cite\_start]`registration_request_id` (int, FK): A link to the original, approved onboarding request for audit purposes[cite: 1514].
-    -   [cite\_start]`university_name` (varchar, Not Null): Official full name of the university[cite: 1514].
-    -   [cite\_start]`acronym` (varchar): Optional shortcode for the university (e.g., UCLM)[cite: 1514].
-    -   [cite\_start]`contact_university_email` (varchar, Not Null): The official contact email for the institution[cite: 1515].
-    -   [cite\_start]`city` (varchar, Not Null): The city where the university is located[cite: 1515].
-    -   [cite\_start]`logo_path` (varchar): The path to the university's logo for branding the UI[cite: 1515].
-    -   [cite\_start]`status` (enum): The university's current operational status (e.g., 'active', 'inactive')[cite: 1515].
+**MySQL/MariaDB enforcement**
+- Emulate partial-unique constraints via **generated columns + UNIQUE**.
+- Use CHECK constraints if supported by target engine/version; otherwise enforce with triggers or service layer.
+- Prefer **explicit invariants** here; validate complex cross-entity rules in service layer and materialized views.
 
-#### Model: User
+**Privacy & compliance**
+- Raw text answers remain in restricted tables; the UI reads only redacted/published projections.
+- Aggregation/analytics use eligibility views to avoid drift and protect anonymity.
 
--   **Purpose:** The central repository for all individuals who interact with the system within a university context.
--   **Key Attributes:**
-    -   [cite\_start]`user_id` (int, PK): Unique identifier for each user[cite: 1574].
-    -   [cite\_start]`university_id` (int, FK): Links the user to their institution, enforcing tenancy[cite: 1574].
-    -   [cite\_start]`school_id` (varchar, Not Null): The official, university-issued ID number, unique within the university[cite: 1574].
-    -   [cite\_start]`username` (varchar, Not Null): The user's editable login username, unique within the university[cite: 1575].
-    -   [cite\_start]`email` (varchar, Not Null, Unique): The user's email, unique across the entire system[cite: 1575].
-    -   [cite\_start]`password_hash` (varchar, Not Null): Hashed password for secure authentication[cite: 1575].
-    -   [cite\_start]`admin_pin_code_hash` (varchar, Null): A secondary hashed PIN for admins, providing an extra security layer[cite: 1575].
-    -   [cite\_start]`last_name` (varchar, Not Null): The user's last name[cite: 1575].
-    -   [cite\_start]`first_name` (varchar, Not Null): The user's first name[cite: 1575].
-    -   [cite\_start]`profile_photo_path` (varchar): Path to the user's profile photo for the UI[cite: 1575].
-    -   [cite\_start]`email_verified` (boolean): A flag indicating if the user has verified their email address[cite: 1575].
-    -   [cite\_start]`status` (enum): The user's account status (e.g., 'active', 'inactive', 'suspended')[cite: 1575].
+---
 
-#### Model: SuperAdmin
+#### 1) Domain Map
 
--   **Purpose:** Stores information for system-wide administrators who are separate from any university-specific tenant.
--   **Key Attributes:**
-    -   [cite\_start]`super_admin_id` (int, PK): Unique identifier for each super admin[cite: 1597].
-    -   [cite\_start]`username` (varchar, Not Null, Unique): The super admin's login username[cite: 1597].
-    -   [cite\_start]`email` (varchar, Not Null, Unique): The super admin's email, unique globally[cite: 1597].
-    -   [cite\_start]`password_hash` (varchar, Not Null): Hashed password for secure authentication[cite: 1598].
-    -   [cite\_start]`super_admin_pin_code_hash` (varchar, Not Null): A secondary hashed PIN for multi-factor authentication[cite: 1598].
-    -   [cite\_start]`last_name` (varchar, Not Null): The super admin's last name[cite: 1598].
-    -   [cite\_start]`first_name` (varchar, Not Null): The super admin's first name[cite: 1598].
-    -   [cite\_start]`profile_photo_path` (varchar): Path to the super admin's profile photo[cite: 1598].
-    -   [cite\_start]`status` (enum): The super admin's account status (e.g., 'active', 'locked')[cite: 1598].
+1. **University Onboarding & Tenancy**
+   - `university_registration_requests`, `university_registration_actions`, `university_registration_documents`, `universities`.
+2. **Identity, Roles & Departments**
+   - `users`, `user_roles`, `user_department_assignments`, (optionally `super_admins`).
+3. **Academic Structure & Offerings**
+   - `programs`, `subjects`, `program_subjects`, `subject_departments`, `school_terms`, `subject_offerings`, `student_enrollments`, `subject_offering_faculty_history`.
+4. **Evaluation Authoring (Forms)**
+   - `likert_scale_templates`, `evaluation_form_templates`, `evaluation_criteria`, `evaluation_questions`.
+5. **Evaluation Periods & Forms** *(new parent model)*
+   - **Parent**: `evaluation_periods` (supports **scheduled** periods)
+   - **Child**: `evaluation_period_forms` (per-audience: student / department_head)
+6. **Submissions & Answers**
+   - `evaluation_submissions`, `evaluation_likert_answers`, `evaluation_text_answers` (renamed from open-ended).
+7. **Qualitative (NLP) & Publication**
+   - `text_answer_sentiments`, `text_answer_keywords`, `evaluation_text_answers_published` (job-maintained redaction table).
+8. **Flags & Resubmission**
+   - `flagged_evaluations`, `flagged_reasons`, `resubmission_windows`.
+9. **Aggregates, Snapshots & Jobs**
+   - `numerical_aggregates`, `sentiment_aggregates`, final snapshot tables; `background_jobs`.
+10. **Notifications**
+   - `notifications` (FE inbox, unread counts, deep links).
 
-### Academic Structure Models
+---
 
-#### Model: Department
+#### 2) Cross-cutting Invariants (summary)
 
--   **Purpose:** Defines the academic departments within a university, supporting a hierarchical structure.
--   **Key Attributes:**
-    -   [cite\_start]`department_id` (int, PK): Unique identifier for the department[cite: 1522].
-    -   [cite\_start]`university_id` (int, FK): Links the department to its university[cite: 1522].
-    -   [cite\_start]`parent_department_id` (int, FK): Self-referencing key to establish hierarchy[cite: 1522].
-    -   [cite\_start]`department_head_id` (int, FK): Links to the `User` who is the current head of the department[cite: 1522].
-    -   [cite\_start]`department_name` (varchar, Not Null): The official name of the department[cite: 1522].
-    -   [cite\_start]`acronym` (varchar): The optional acronym for the department, useful for display in the UI[cite: 1522].
-    -   [cite\_start]`is_active` (boolean): A flag for soft deletion or archiving[cite: 1523].
+- **One active evaluation period per university**; `active` and `cancelling` are mutually exclusive with any other active/"cancelling" period. **Scheduled** periods are allowed in the future (multiple allowed).
+- **Two audience templates max per period**: one for `student`, one for `department_head`. The legacy `both` semantics are removed.
+- **Students** submit per **enrolled subject offering** they take with a given faculty; **department heads** submit per **faculty member within their department** (not tied to a specific subject offering).
+- **One submission per evaluator × target × role × period** (detailed below).
+- **Open-ended → Text** rename is canonical; FE reads only **Published** redacted text (anonymity threshold ≥ 3).
+- **Flags & resubmission** exclude submissions from aggregates until resolved; `resubmission_windows` enforce the 48h grace.
+- **Hybrid reporting**: live views/caches for day-to-day; immutable snapshots at finalization for reproducibility.
 
-#### Model: SchoolTerm
+---
 
--   **Purpose:** Defines a university's distinct academic periods.
--   **Key Attributes:**
-    -   [cite\_start]`school_term_id` (int, PK): Unique identifier for the term[cite: 1532].
-    -   [cite\_start]`university_id` (int, FK): Links the term to its university[cite: 1532].
-    -   [cite\_start]`start_school_year` (int, Not Null): The academic starting year (e.g., 2025)[cite: 1532].
-    -   [cite\_start]`end_school_year` (int, Not Null): The academic ending year (e.g., 2026)[cite: 1533].
-    -   [cite\_start]`semester` (enum): The specific semester ('1st semester', '2nd semester', 'Summer')[cite: 1533].
-    -   [cite\_start]`start_date` (date): The optional, specific start date of the term[cite: 1533].
-    -   [cite\_start]`end_date` (date): The optional, specific end date of the term[cite: 1533].
-    -   [cite\_start]`is_active` (boolean): A flag for archiving past terms[cite: 1533].
+#### 3) University Onboarding & Tenancy
 
-#### Model: Program
+##### 3.1 Tables & Purpose
+- **University_Registration_Requests** — inbound tenant onboarding requests.
+- **University_Registration_Actions** — reviewer actions/locks for a given request; **exactly one active lock** at any time.
+- **University_Registration_Documents** — artifacts uploaded during review.
+- **Universities** — tenant record (contact details, branding, status).
 
--   **Purpose:** Catalogs all academic programs, courses, tracks, and grade levels offered by the university.
--   **Key Attributes:**
-    -   [cite\_start]`program_id` (int, PK): Unique identifier for the program[cite: 1610].
-    -   [cite\_start]`university_id` (int, FK): The university this program belongs to, critical for tenancy[cite: 1610].
-    -   [cite\_start]`department_id` (int, FK): The department that owns or manages this program[cite: 1611].
-    -   [cite\_start]`program_code` (varchar, Not Null): The university's unique code for the program (e.g., "BSIT")[cite: 1611].
-    -   [cite\_start]`program_name` (varchar, Not Null): The official name of the program[cite: 1611].
-    -   [cite\_start]`program_level` (enum): The educational stage ('basic education', 'senior_high', 'college', 'graduate')[cite: 1611].
-    -   [cite\_start]`is_active` (boolean): Active/archive flag[cite: 1611].
+##### 3.2 Keys & Constraints
+- **Canonical FK/PK**: use `university_registration_request_id` everywhere (requests, actions, documents, and `universities`).
+- **Global uniqueness**: `universities.contact_university_email` is globally unique.
+- **One-active-lock**: generated column + UNIQUE on actions:
+  `active_lock_key := CASE WHEN is_active THEN university_registration_request_id END`.
 
-#### Model: Subject
+---
 
--   **Purpose:** Stores the definitions of all subjects (e.g., courses, classes) offered by the university.
--   **Key Attributes:**
-    -   [cite\_start]`subject_id` (int, PK): Unique identifier for the subject[cite: 1618].
-    -   [cite\_start]`university_id` (int, FK): Links the subject to its university, enforcing tenancy[cite: 1618].
-    -   [cite\_start]`subject_code` (varchar, Not Null): The unique code for the subject (e.g., "IT-101"), unique per university[cite: 1619].
-    -   [cite\_start]`name` (varchar, Not Null): The official title of the subject (e.g., "Calculus 1")[cite: 1619].
-    -   [cite\_start]`units` (int): Number of academic units or credits[cite: 1619].
-    -   [cite\_start]`is_active` (boolean): Active/archive flag[cite: 1619].
+#### 4) Identity, Roles & Departments
 
-### Evaluation Setup Models
+##### 4.1 Users
+- **Status enum**: `{active, archived, suspended}` only.
+  *Auth:* only `active` may log in. Consider `archived_reason`, `archived_reason_notes`, `archived_at` for auditability.
 
-#### Model: LikertScaleTemplate
+##### 4.2 Roles & Tenure
+- **User_Roles** — multi-role (e.g., faculty, department_head); uniqueness for active role per user.
+- **User_Department_Assignments** — add `user_role_id` (FK→`user_roles`), `started_at`, `ended_at` to record tenure (who/when someone served as department head/faculty in a department).
+  *Policy (v1):* multiple faculty in a department allowed; one head enforced by service logic (DB uniqueness can be added later if required).
 
--   **Purpose:** Defines the institution's reusable Likert scales to ensure consistency.
--   **Key Attributes:**
-    -   [cite\_start]`likert_scale_template_id` (int, PK): Unique identifier for the scale[cite: 1684].
-    -   [cite\_start]`likert_name` (varchar, Not Null): A descriptive name for the scale (e.g., "Standard 1-5 Scale")[cite: 1684].
-    -   [cite\_start]`min_value` (tinyint, Not Null): The minimum value of the scale (e.g., 1)[cite: 1684].
-    -   [cite\_start]`max_value` (tinyint, Not Null): The maximum value of the scale (e.g., 5)[cite: 1684].
+##### 4.3 Registration Codes (Invites)
+- Rename *Tokens* → **User_Registration_Codes**.
+- Columns: `intended_role`, `max_uses`, `used_count`, `status (active/inactive)`, expiry, created_by.
+- **Traceability**: `users.registration_code_id` FK.
+- **Atomic usage**: single guarded `UPDATE` (status active, not expired, `used_count < max_uses`).
 
-#### Model: EvaluationFormTemplate
+---
 
--   **Purpose:** Stores the master templates for evaluation forms.
--   **Key Attributes:**
-    -   [cite\_start]`form_template_id` (int, PK): Unique identifier for the template[cite: 1677].
-    -   [cite\_start]`university_id` (int, FK): Scopes the template to a specific university[cite: 1677].
-    -   [cite\_start]`name` (varchar, Not Null): The admin-defined name for the template[cite: 1677].
-    -   [cite\_start]`description` (text): Optional details or notes about the form's purpose[cite: 1677].
-    -   [cite\_start]`instructions` (text): Custom instructions displayed to the evaluator at the start of the form[cite: 1677].
-    -   [cite\_start]`likert_scale_template_id` (int, FK): Defines the Likert scale used for numerical questions on this form[cite: 1677].
-    -   [cite\_start]`status` (enum): The template's current lifecycle state ('draft', 'active', 'assigned', 'archived')[cite: 1677].
+#### 5) Academic Structure & Offerings
 
-#### Model: EvaluationCriterion
+- **School_Terms**: `UNIQUE(university_id, start_school_year, end_school_year, semester)`; `start <= end`.
+- **Subject_Offerings**: may have optional `program_id` (for GE/cross-listed).
+- **Faculty change history**: trigger on `subject_offerings.faculty_user_id` updates → append to `subject_offering_faculty_history`.
+- **Student_Enrollments**: add optional `drop_reason` enum, `drop_reason_notes`, `dropped_at` for reporting.
 
--   **Purpose:** Represents a distinct, weighted section within an evaluation form template.
--   **Key Attributes:**
-    -   [cite\_start]`evaluation_criteria_id` (int, PK): Unique identifier for the criterion[cite: 1693].
-    -   [cite\_start]`form_template_id` (int, FK): Links the criterion to its parent form template[cite: 1696].
-    -   [cite\_start]`criterion_name` (varchar, Not Null): The title of the section[cite: 1700].
-    -   [cite\_start]`criterion_description` (text): Optional further explanation for evaluators[cite: 1704].
-    -   [cite\_start]`weight` (decimal, Not Null): The percentage weight of this criterion in the final score calculation[cite: 1707].
-    -   [cite\_start]`order` (int, Not Null): The display order of this criterion within the form[cite: 1709, 1713].
+---
 
-#### Model: EvaluationQuestion
+#### 6) Evaluation Authoring (Forms)
 
--   **Purpose:** Stores the individual questions, supporting both Likert-scale and open-ended questions.
--   **Key Attributes:**
-    -   [cite\_start]`question_id` (int, PK): Unique identifier for the question[cite: 1721].
-    -   `criterion_id` (int, FK): Links a Likert-scale question to its parent criterion. [cite\_start]`NULL` for open-ended questions[cite: 1722].
-    -   [cite\_start]`question_text` (varchar, Not Null): The text of the question prompt[cite: 1722].
-    -   [cite\_start]`question_type` (enum): The type of question ('likert' or 'open_ended')[cite: 1722].
-    -   [cite\_start]`is_required` (boolean): Specifies if an answer is mandatory[cite: 1722].
-    -   [cite\_start]`is_active` (boolean): Archive flag for soft-deleting questions[cite: 1722].
+- **Evaluation_Form_Templates**: lifecycle `draft ↔ active → assigned`; `assigned` = locked; editing an `active` template that fails validation reverts it to `draft`.
+- **Evaluation_Questions**: types include `likert` and **`text`** (renamed from `open_ended`).
 
-#### Model: EvaluationFormAssignment (Evaluation Period)
+---
 
--   **Purpose:** Activates an evaluation by linking a form template to an academic term and assessment period.
--   **Key Attributes:**
-    -   [cite\_start]`form_assignment_id` (int, PK): Unique identifier for this scheduled period[cite: 1730].
-    -   [cite\_start]`university_id` (int, FK): The university this assignment applies to, for tenancy[cite: 1730].
-    -   [cite\_start]`school_term_id` (int, FK): The academic term this period belongs to[cite: 1731].
-    -   [cite\_start]`assessment_period` (enum): The portion of the term being evaluated ('midterm' or 'finals')[cite: 1731].
-    -   [cite\_start]`form_template_id` (int, FK): The specific form template to be used[cite: 1731].
-    -   [cite\_start]`evaluator_role` (enum): Specifies who this assignment is for ('student', 'department_head', or 'both')[cite: 1731].
-    -   [cite\_start]`start_date_time` (timestamp, Not Null): The precise moment the evaluation becomes available[cite: 1731].
-    -   [cite\_start]`end_date_time` (timestamp, Not Null): The precise moment the evaluation closes[cite: 1731].
-    -   [cite\_start]`status` (enum): The status of the assignment ('active' or 'archived')[cite: 1731].
+#### 7) Evaluation Periods & Forms (Parent/Child)
 
-### Evaluation Submission & Flagging Models
+##### 7.1 Evaluation_Periods (Parent)
+- **Status enum**: `scheduled | active | cancelling | cancelled | archived`.
+  - *Scheduled*: allows admins to **create future periods** ahead of time.
+  - *Active*: counting towards aggregates; submissions accepted.
+  - *Cancelling*: transitional; async invalidation job in progress; blocks creating another active period.
+  - *Cancelled*: closed, excluded from aggregates.
+  - *Archived*: ended normally; stays included.
+- **One-active invariant**: generated column + UNIQUE across `(university_id)` when status in `{active, cancelling}`.
+  *Note*: Multiple `scheduled` periods are allowed for planning. Service validation can warn about time overlaps, but overlaps are permitted by DB (admin override possible).
+- **Window constraints**: `starts_at < ends_at`; optional trigger to hard-enforce.
 
-#### Model: EvaluationSubmission
+##### 7.2 Evaluation_Period_Forms (Child)
+- Per-period, per-audience form assignment.
+- **evaluator_role**: `student` | `department_head` (no `both`).
+- **Uniqueness**: `UNIQUE(evaluation_period_id, evaluator_role)`.
+- **Status**: mirror parent (`active/archived/cancelling/cancelled`); `scheduled` not required here—the parent controls timing.
 
--   **Purpose:** The central "session" table for an evaluation, linking the evaluator, the subject, and the evaluation period.
--   **Key Attributes:**
-    -   [cite\_start]`submission_id` (int, PK): Unique identifier for this submission session[cite: 1759].
-    -   [cite\_start]`evaluator_user_id` (int, FK): The user submitting the evaluation[cite: 1760].
-    -   [cite\_start]`subject_offering_id` (int, FK): The specific class or subject offering being evaluated[cite: 1760].
-    -   [cite\_start]`form_assignment_id` (int, FK): The active evaluation period this submission belongs to[cite: 1760].
-    -   [cite\_start]`evaluation_start_time` (timestamp, Not Null): Timestamp when the user begins the evaluation[cite: 1760].
-    -   [cite\_start]`evaluation_end_time` (timestamp, Nullable): Timestamp when the user submits the evaluation[cite: 1760].
-    -   [cite\_start]`status` (enum): The lifecycle status of the submission ('pending', 'submitted')[cite: 1760].
+---
 
-#### Model: EvaluationLikertAnswer
+#### 8) Submissions & Eligibility
 
--   **Purpose:** Stores a single numerical answer to a Likert-scale question for a specific submission.
--   **Key Attributes:**
-    -   [cite\_start]`likert_answer_id` (int, PK): Unique identifier for the answer[cite: 1742].
-    -   [cite\_start]`submission_id` (int, FK): Links this answer to its parent submission session[cite: 1742].
-    -   [cite\_start]`question_id` (int, FK): The specific Likert-scale question being answered[cite: 1742].
-    -   [cite\_start]`answer_value` (tinyint, Not Null): The numerical score given by the evaluator[cite: 1742].
+##### 8.1 Evaluation_Submissions (unified model)
+**Key columns**
+- `evaluation_period_id` (FK), `evaluator_role` (`student`|`department_head`), `evaluator_user_id`.
+- Target identity:
+  - **Student route**: `subject_offering_id` (NOT NULL), and `evaluated_faculty_user_id` (derived from offering at submit-time, stored for denormalized joins & snapshots).
+  - **Department-head route**: `department_id` (NOT NULL), and `evaluated_faculty_user_id` (explicit target within that department).
+- Timing: `evaluation_start_time`, `evaluation_end_time` (supports configurable min-seconds “nudge”).
 
-#### Model: EvaluationOpenEndedAnswer
+**Submission uniqueness**
+- **Students**: one per `(evaluation_period_id, evaluator_role='student', subject_offering_id, evaluator_user_id)`.
+- **Dept Heads**: one per `(evaluation_period_id, evaluator_role='department_head', evaluated_faculty_user_id, evaluator_user_id)`.
 
--   **Purpose:** Stores a single textual answer to an open-ended question for a specific submission.
--   **Key Attributes:**
-    -   [cite\_start]`open_ended_answer_id` (int, PK): Unique identifier for the answer[cite: 1750].
-    -   [cite\_start]`submission_id` (int, FK): Links this answer to its parent submission session[cite: 1750].
-    -   [cite\_start]`question_id` (int, FK): The specific open-ended question being answered[cite: 1750].
-    -   [cite\_start]`open_ended_answer` (text, Not Null): The written feedback from the evaluator[cite: 1750].
+**Integrity checks** *(DB or service-layer)*
+- **Student route**: evaluator must be **enrolled** in `subject_offering_id` for the period’s time window; the offering’s `faculty_user_id` must equal `evaluated_faculty_user_id` at the time of submission (history table ensures traceability if faculty changed mid-term).
+- **Dept head route**: evaluator must hold an **active department_head** role in `department_id` during the period window; `evaluated_faculty_user_id` must be an **active faculty** in the same department during that window.
+- **Role-target guard**: CHECK or trigger to enforce:
+  - if `evaluator_role = 'student'` → `subject_offering_id IS NOT NULL` and `department_id IS NULL`.
+  - if `evaluator_role = 'department_head'` → `department_id IS NOT NULL` and `subject_offering_id IS NULL`.
 
-#### Model: FlaggedEval
+##### 8.2 Answers
+- **Likert**: `UNIQUE(submission_id, question_id)`.
+- **Text** *(renamed)*: `evaluation_text_answers(text_answer_id, text_response)`; `UNIQUE(submission_id, question_id)`.
 
--   **Purpose:** Acts as a case file for a submission that has been flagged for manual administrative review.
--   **Key Attributes:**
-    -   [cite\_start]`flagged_evaluation_id` (int, PK): Unique identifier for the flag record[cite: 1833].
-    -   [cite\_start]`submission_id` (int, FK): The evaluation submission that was flagged[cite: 1834].
-    -   [cite\_start]`flagged_at` (timestamp, Not Null): When the flag was created[cite: 1834].
-    -   [cite\_start]`status` (enum): The current review status ('pending', 'reviewed', 'resolved', 'ignored')[cite: 1834].
-    -   [cite\_start]`reviewed_by_user_id` (int, FK): The admin who reviewed the flag[cite: 1834].
-    -   [cite\_start]`resolution_notes` (text): The admin's notes on why a certain resolution was chosen[cite: 1834].
+---
 
-#### Model: FlaggedReason
+#### 9) Qualitative (NLP) & Publication
 
--   **Purpose:** Stores the specific, machine-readable reasons why a submission was flagged.
--   **Key Attributes:**
-    -   [cite\_start]`flagged_reason_id` (int, PK): Unique identifier for the reason record[cite: 1841].
-    -   [cite\_start]`flagged_evaluation_id` (int, FK): The parent flagged evaluation case[cite: 1841].
-    -   [cite\_start]`reason_code` (varchar, Not Null): A short, machine-readable code for the flag type[cite: 1841].
-    -   [cite\_start]`reason_description` (text, Not Null): A detailed, human-readable explanation of the flag[cite: 1841].
+- **Sentiments / Keywords**: rename to `text_answer_sentiments`, `text_answer_keywords` (FK → `evaluation_text_answers.text_answer_id`).
+- **Published text answers (UI-facing)**: `evaluation_text_answers_published` materialized by job.
+  - Only publish when the **anonymity threshold ≥ 3** for the relevant cohort.
+  - Store `redacted_text`, `cohort_response_count`, linkage to `evaluation_period_id` & `question_id` (& `text_answer_id` for provenance).
+  - FE **never** reads raw answers.
 
-### Analysis, AI, and Notifications Models
+---
 
-#### Model: NumericalAggregate & SentimentAggregate
+#### 10) Flags & Resubmission
 
--   **Purpose:** The primary summary tables designed for fast dashboard reads, storing pre-calculated and normalized scores.
--   **Key Attributes (`NumericalAggregate`):**
-    -   [cite\_start]**Composite Primary Key:** Includes `university_id`, `school_term_id`, `faculty_user_id`, and `calc_run_id`[cite: 1792].
-    -   [cite\_start]`n_valid_numeric` (int): Count of usable Likert answers processed, for data quality analysis[cite: 1787].
-    -   [cite\_start]`quant_score_raw` (decimal): The raw weighted score before normalization[cite: 1787].
-    -   [cite\_start]`cohort_n` (int): The number of results used to compute the cohort baseline, for statistical context[cite: 1788].
-    -   [cite\_start]**`mu_quant` (decimal): The mean score of the comparison cohort (μ)**[cite: 1787].
-    -   [cite\_start]**`sigma_quant` (decimal): The standard deviation of the comparison cohort (σ)**[cite: 1787].
-    -   [cite\_start]`z_quant` (decimal): The normalized quantitative z-score (`(raw_score - μ) / σ`)[cite: 1788].
-    -   [cite\_start]`final_score_60_40` (decimal): The final blended score (60% quantitative, 40% qualitative)[cite: 1788].
-    -   [cite\_start]`is_final_snapshot` (boolean): Flag that freezes this record when the period is locked[cite: 1789].
--   **Key Attributes (`SentimentAggregate`):**
-    -   [cite\_start]**Composite Primary Key:** Same as `NumericalAggregate`[cite: 1814].
-    -   [cite\_start]`n_valid_comments` (int): Count of comments successfully analyzed[cite: 1801].
-    -   [cite\_start]`qual_score_raw` (decimal): A single index summarizing overall sentiment[cite: 1802].
-    -   [cite\_start]`cohort_n` (int): The number of results in the qualitative cohort[cite: 1803].
-    -   [cite\_start]**`mu_qual` (decimal): The mean qualitative score of the comparison cohort (μ)**[cite: 1802].
-    -   [cite\_start]**`sigma_qual` (decimal): The standard deviation of the qualitative cohort (σ)**[cite: 1802].
-    -   [cite\_start]`z_qual` (decimal): The normalized qualitative z-score[cite: 1803].
-    -   [cite\_start]`prevailing_label` (enum): The dominant sentiment[cite: 1802].
+- **Flagged_Evaluations.status**: `{pending, approved, archived, resubmission_requested}`.
+- **Resubmission_Windows**: one per `submission_id`, with `window_starts_at`, `window_ends_at = +48h`.
+- **Aggregate eligibility**: flagged `pending` or `resubmission_requested` and submissions under `cancelled` periods are excluded from all views/aggregations until resolved.
 
-#### Model: UserRegistrationToken
+---
 
--   **Purpose:** Manages invite/cohort tokens for controlled self-service user onboarding.
--   **Key Attributes:**
-    -   [cite\_start]`registration_token_id` (int, PK): Unique identifier for the token record[cite: 1542].
-    -   [cite\_start]`university_id` (int, FK): Scopes the token to a specific university[cite: 1542].
-    -   [cite\_start]`token_hash` (char(64), Not Null): The SHA-256 hash of the raw token[cite: 1542].
-    -   [cite\_start]`intended_role` (enum, Not Null): The user role this token is valid for[cite: 1542].
-    -   [cite\_start]`max_uses` (int, Not Null): The maximum number of times this token can be used[cite: 1543].
-    -   [cite\_start]`used_count` (int, Not Null): The current number of times the token has been consumed[cite: 1543].
+#### 11) Aggregates, Snapshots & Jobs
 
-#### Model: AISuggestion
+- **Eligibility views**: centralize rules for inclusion (status, period state, anonymity threshold). All live dashboards read from these views; caches hydrate from them.
+- **Finalization**: produce immutable **snapshot tables** (e.g., `*_final_snapshots`) when a period is finalized; reports/CSVs/PDFs draw from snapshots.
+- **Cancellation**: background job transitions `active → cancelling → cancelled`, invalidates caches and any provisional aggregates derived from that period.
 
--   **Purpose:** Stores the historical output from the "AI Assistant," allowing users to review their generated insights over time.
--   **Key Attributes:**
-    -   [cite\_start]`suggestion_id` (int, PK): Unique ID for the saved suggestion[cite: 1825].
-    -   [cite\_start]`university_id` (int, FK): The university tenant for data scoping[cite: 1825].
-    -   [cite\_start]`user_id` (int, FK): The user who generated and saved the suggestion[cite: 1825].
-    -   [cite\_start]`improvement_area` (varchar, Not Null): The specific area targeted for improvement[cite: 1826].
-    -   [cite\_start]`suggestion_text` (text, Not Null): The full text of the AI-generated suggestion[cite: 1826].
+---
 
-#### Model: Notification
+#### 12) Notifications
 
--   **Purpose:** Stores system-generated, user-specific notifications for display in the UI.
--   **Key Attributes:**
-    -   [cite\_start]`notification_id` (int, PK): Unique ID for the notification[cite: 1848].
-    -   [cite\_start]`user_id` (int, FK): The recipient of the notification[cite: 1848].
-    -   [cite\_start]`notification_type` (varchar): A machine-readable code for the type of notification[cite: 1848].
-    -   [cite\_start]`content` (text, Not Null): The human-readable message[cite: 1848].
-    -   [cite\_start]`read_at` (timestamp, Nullable): Timestamp indicating when the user marked the notification as read[cite: 1848].
+- Use existing `notifications` table; add `context_type/context_id` later if needed for deep links to flags/resubmissions.
+- AI suggestion notifications are visible only to faculty & department heads (service-level enforcement; optional DB CHECK by type if/when typed).
 
-<!-- end list -->
+---
+
+#### 13) DB Patterns & Example Keys (MySQL/MariaDB)
+
+- **One-active reviewer lock** (registration actions):
+  `active_lock_key := CASE WHEN is_active THEN university_registration_request_id END`  → `UNIQUE(active_lock_key)`
+- **One-active evaluation period per university** (allow multiple scheduled):
+  `active_period_key := CASE WHEN status IN ('active','cancelling') THEN university_id END`  → `UNIQUE(active_period_key)`
+- **Per-audience form**: `UNIQUE(evaluation_period_id, evaluator_role)`
+- **Student submission uniqueness**: `UNIQUE(evaluation_period_id, evaluator_role, subject_offering_id, evaluator_user_id)`
+- **Dept-head submission uniqueness**: `UNIQUE(evaluation_period_id, evaluator_role, evaluated_faculty_user_id, evaluator_user_id)`
+
+---
+
+#### 14) Differences vs. Prior Baseline (quick diff)
+
+- **New parent** `evaluation_periods` with **scheduled** status added; legacy `both` evaluator_role removed.
+- **Split** child `evaluation_period_forms` per audience (student/department_head).
+- **Users.status** reduced to `{active, archived, suspended}`; old `inactive/locked` removed.
+- **User_Department_Assignments** gains `user_role_id`, `started_at`, `ended_at` for tenure.
+- **Open-ended → Text** rename + cascades; **Published** redacted table added; FE reads published only.
+- **Enrollment** adds `drop_reason`, `drop_reason_notes`, `dropped_at`.
+- **Flags** enum aligned; **Resubmission_Windows** added.
+- **Universities** enforces global uniqueness on `contact_university_email`.
+- **Reviewer locks** enforced via generated-column unique.
+
+---
+
+#### 15) Future-proofing Notes
+
+- If a third evaluator type appears (e.g., peer/self), extend `evaluation_period_forms` with a new `evaluator_role` value and replicate the submission uniqueness pattern for that role.
+- If the institution requires DB-level enforcement of **one department head per department**, add a generated-column unique keyed on `(department_id)` when the corresponding `user_role_id` denotes `department_head` and the assignment is active.
+- Consider a materialized **evaluation_eligibilities** table per period for large cohorts to accelerate FE pickers and server validation (precomputed join of enrolled students×offerings and department_head×faculty-in-department). The service can rely on this table for quick eligibility checks.
+
+---
+
+#### 16) Handoff Checklist (for Dev & QA)
+
+- Migrations aligned with the change set (Step B): ensure renames, new tables, and uniqueness keys exist.
+- Access control: raw vs. published answers; snapshot immutability.
+- FE/BE contract: submission payloads differ by role (student vs dept-head).
+  - Student: `{ period_id, role: 'student', subject_offering_id }` → server derives & stores `evaluated_faculty_user_id`.
+  - Dept-head: `{ period_id, role: 'department_head', department_id, evaluated_faculty_user_id }`.
+- Jobs: redaction/publish, period cancellation, finalize-to-snapshot, cache invalidation.
+- Views: eligibility views power analytics and must exclude ineligible rows.
 
 ```
 
