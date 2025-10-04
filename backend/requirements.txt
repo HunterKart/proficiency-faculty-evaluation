@@ -22,7 +22,6 @@ keybert
 sentence-transformers
 scikit-learn
 sentencepiece
-wordcloud
 Pillow
 numpy
 
