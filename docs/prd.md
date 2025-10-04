@@ -181,7 +181,7 @@ The architecture will be a **simple monolith** consisting of a single FastAPI ba
 -   **As a** Super Admin/Developer, **I want** the database schema to be initialized and the AI model environment to be prepared, **so that** the core data structures are in place and future AI-related development is streamlined.
 -   **Acceptance Criteria:**
     1.  A database migration tool is integrated into the backend service.
-    2.  An initial migration script is created that generates all necessary tables as defined in the provided `Database-Schema-Data-Dictionary-of-Proficiency.pdf`.
+    2.  An initial migration script is created that generates all necessary tables as defined in the provided `database-of-proficiency.md`.
     3.  The migration can be successfully run via a command within the local Docker environment.
     4.  A dedicated `Dockerfile` for the RQ worker is created, which installs all required Python libraries for the AI/ML models (XLM-ROBERTa, KeyBERT, Flan-T5, etc.) to prevent slow builds in later epics.
 
