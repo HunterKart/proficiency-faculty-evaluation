@@ -195,7 +195,7 @@ sequenceDiagram
     participant User
     participant Frontend
     participant Backend
-    participant AI Model (Flan-T5)
+    participant AI Model (Gemini API)
     User->>Frontend: Clicks "AI Assistant"
     Frontend->>Backend: GET /api/ai/filters
     Backend-->>Frontend: Returns available terms/periods
@@ -204,8 +204,8 @@ sequenceDiagram
     Frontend->>Frontend: Disables buttons, shows loading state
     Frontend->>Backend: POST /api/ai/suggestions (body: {term, period})
     Backend->>Backend: Gathers processed data for user
-    Backend->>AI Model (Flan-T5): Constructs and sends prompt
-    AI Model (Flan-T5)-->>Backend: Returns generated text
+    Backend->>AI Model (Gemini API): Constructs and sends prompt
+    AI Model (Gemini API)-->>Backend: Returns generated text
     Backend-->>Frontend: 200 OK (body: {reportContent})
     Frontend-->>User: Displays generated report
     Frontend->>Frontend: Re-enables buttons

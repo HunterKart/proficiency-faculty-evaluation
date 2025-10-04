@@ -67,7 +67,7 @@ Existing faculty evaluation systems, particularly within the Philippines and at 
     -   **FR5.1:** Evaluation submissions with a status of 'archived' or 'pending review' **must be excluded** from all aggregate calculations.
 -   **FR6: AI-Powered Analysis and Insights**
     -   The system must perform automated **sentiment analysis** (Primary Model: XLM-ROBERTa) and **keyword extraction** (KeyBERT).
-    -   A dedicated **"AI Assistant" page** shall be available to Faculty and Department Heads to generate reports and suggestions from processed data using the Flan-T5 model.
+    -   A dedicated **"AI Assistant" page** shall be available to Faculty and Department Heads to generate reports and suggestions from processed data using the external Gemini API.
 -   **FR7: Dashboards and Visualizations**
     -   The system shall present data using specific visualizations: **Word Clouds, Bar Charts, and Performance Trend Line Charts**. Admins will also have access to an **Evaluation Submission Behavior Line Chart**.
     -   Department Heads and Admins must be able to switch between different data views or **"modes"** (e.g., department-wide, specific faculty results).
@@ -183,7 +183,7 @@ The architecture will be a **simple monolith** consisting of a single FastAPI ba
     1.  A database migration tool is integrated into the backend service.
     2.  An initial migration script is created that generates all necessary tables as defined in the provided `database-schema.md`.
     3.  The migration can be successfully run via a command within the local Docker environment.
-    4.  A dedicated `Dockerfile` for the RQ worker is created, which installs all required Python libraries for the AI/ML models (XLM-ROBERTa, KeyBERT, Flan-T5, etc.) to prevent slow builds in later epics.
+    4.  A dedicated `Dockerfile` for the RQ worker is created, which installs all required Python libraries for the AI/ML models (XLM-ROBERTa, KeyBERT, Gemini API, etc.) to prevent slow builds in later epics.
 
 **Story 1.3: Super Admin Authentication**
 
@@ -593,7 +593,7 @@ _UX Note: To improve the first-time user experience, the "Evaluation Management"
 -   **Acceptance Criteria:**
     1.  When an action button is clicked, the frontend sends a request to a dedicated backend endpoint, including the selected filters (term, period, user/department mode).
     2.  The backend retrieves all necessary processed data for the given context, including records from `numerical_aggregates`, `sentiment_aggregates`, and the top 5 positive/negative `open_ended_keywords`.
-    3.  A structured, context-rich prompt is constructed for the **Flan-T5 model**. This prompt must adhere to the **Persona-Context-Task-Format** framework and must instruct the model to adopt a constructive "academic coach" persona.
+    3.  A structured, context-rich prompt is constructed for the **Gemini API**. This prompt must adhere to the **Persona-Context-Task-Format** framework and must instruct the model to adopt a constructive "academic coach" persona.
     4.  While the backend is processing the request, all action buttons on the 'AI Assistant' page **must be disabled** and display a loading indicator.
     5.  If the model fails to generate a response or times out, the API must return a specific error (e.g., 503 Service Unavailable), and the frontend must display a user-friendly message.
     6.  The generated suggestions are returned to the frontend and displayed clearly in the main content area of the "AI Assistant" page.
