@@ -465,7 +465,7 @@ _UX Note: To improve the first-time user experience, the "Evaluation Management"
     2.  The background job compares the submitted open-ended text against **that same evaluator's** previous submissions across all evaluation periods.
     3.  If the text has over 95% similarity to one of their previous submissions, a "Recycled Content" flag is created for the evaluation.
     4.  The notification sent to the student for recycled content must clearly explain that reused text was detected and state the importance of providing original feedback for each unique evaluation.
--   **`Dev Note:`** The API response for a resubmission request must include data identifying the specific text fragment(s) that triggered the flag to enable frontend highlighting.
+-   **`Dev Note:`** The integrity report endpoint must return a `highlights` array where each element includes the originating `question_id`, optional `text_answer_id`, zero-based `start_index`/`end_index`, and an anonymized `snippet`. Multiple fragments per question must be supported so the resubmission screen can render distinct spans without re-fetching worker data.
 
 **Story 4.5a: Flagged Evaluation Dashboard (View Only)**
 

@@ -491,7 +491,7 @@ flowchart TD
 **Final Technical & Developer Notes:**
 
 -   **"One Resubmission" Rule:** The backend must enforce a rule that an evaluation can only be sent back for resubmission once.
--   **Highlighting Flagged Content:** The API must provide data indicating which specific parts of the original text were flagged for the frontend to render a visual highlight.
+-   **Highlighting Flagged Content:** The API must provide `highlights` metadata (question-level identifiers plus character ranges and sanitized snippets). The student resubmission form and admin review dialog should map each entry to the corresponding rich-text component using `question_id` and render multiple spans per answer when present.
 -   **Resubmission Grace Period & Deadline Display:** The backend must create a grace period for the resubmission. The frontend **must** display this deadline as a separate, persistent, and dynamic countdown timer near the submit button to maintain constant visibility. The main banner is for the rejection reason only.
 -   **"Clear Form" Option:** A secondary button, "Clear Form and Start Over," should be provided. On click, it should reset the form state using the form management library (`React Hook Form`).
 -   **Confirmation Tone:** The success confirmation message after resubmission should use the specified encouraging copy to acknowledge the user's extra effort.
