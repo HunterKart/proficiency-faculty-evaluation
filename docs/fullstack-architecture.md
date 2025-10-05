@@ -1221,10 +1221,11 @@ This section defines the FastAPI surface that powers the Proficiency platform. I
 
 -   **Users & Roles**
     -   `GET /api/v1/users`: List users filtered by role, status, department, or search (`q`). Default sort `last_name ASC`.
-    -   `POST /api/v1/users`: Create a user manually (admin-created). Requires specifying at least one role and department assignment.
+    -   **V1 provisioning constraint:** Tenant Admins must onboard users through the bulk import pipeline (`POST /api/v1/imports/users`, Section 5.12) or by distributing invitation codes that drive the self-registration flow (`POST /public/auth/self-registration`, Section 5.2) to stay compliant with FR1.
     -   `PATCH /api/v1/users/{userId}`: Update profile, status, or reset MFA. Enforces optimistic locking.
     -   `POST /api/v1/users/{userId}/roles`: Attach a new role; automatically provisions default navigation preferences.
     -   `DELETE /api/v1/users/{userId}/roles/{userRoleId}`: Soft revoke a role, recording `revoked_at`.
+    -   **Post-V1 roadmap:** A manual single-user provisioning endpoint (`POST /api/v1/users`) may be introduced later with additional guardrails once FR1's bulk/self-service flows are firmly established.
 -   **Department & Program Assignment**
     -   `GET /api/v1/departments`: List departments with nested head assignments and program counts.
     -   `POST /api/v1/departments`, `PATCH /api/v1/departments/{id}`: CRUD with validations for unique name/acronym.
@@ -1343,6 +1344,8 @@ All analytics endpoints enforce PRD requirement to exclude archived or pending-r
 -   `GET /api/v1/imports/{batchId}/rows`: Paginated detail of parsed rows with status and diagnostic messages. Supports `filter[status]` and `search` for row-level troubleshooting.
 -   `GET /api/v1/imports/{batchId}/error-report` & `/result-file`: Authenticated download endpoints for worker-produced CSV/zip artifacts.
 -   `POST /api/v1/imports/{batchId}/retry` : Re-queue failed rows after Admin fixes the source file or overrides validation.
+
+These import routes are the mandatory mechanism for V1 admin provisioning of accounts (including administrators) in alignment with FR1; they pair with invitation-code self-registration for smaller cohorts or late additions (Section 5.2).
 
 All import endpoints stream uploads directly to disk, enqueue parsing jobs, and surface validation issues via `import_row_issues`, fulfilling FR9.【F:docs/prd.md†L108-L115】【F:docs/fullstack-architecture.md†L1025-L1114】
 
