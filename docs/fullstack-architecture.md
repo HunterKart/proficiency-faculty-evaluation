@@ -1329,11 +1329,13 @@ All analytics endpoints enforce PRD requirement to exclude archived or pending-r
 
 | Method & Path | Description | Notes |
 | :------------ | :---------- | :---- |
-| `POST /api/v1/ai/suggestions/run` | Initiate Gemini-powered suggestion generation for a specified cohort (faculty, department). | Worker pulls job, anonymizes payload per Section 17, and caches result in Redis for 6 hours to control costs (Section 7). |
-| `GET /api/v1/ai/suggestions/run/{runId}` | Fetch the status and output of a generation request. | Returns `pending`, `completed`, `failed` plus generated text when ready. |
-| `POST /api/v1/ai/suggestions/{runId}/save` | Persist a generated suggestion to history with optional user notes/tags. | Creates `ai_suggestions` record linked to run. |
+| `GET /api/v1/ai/filters` | Bootstrap the AI Assistant with the allowable term/period/role filters for the signed-in user. | Aligns to the UI load sequence so the front-end can render controls before any generation action is taken.【F:docs/front-end-spec.md†L191-L212】 |
+| `POST /api/v1/ai/suggestions` | Synchronously generate Gemini-powered suggestions using the currently selected filters and action. | Request body includes a `filters` object (term, period, scope) and an `action` identifier matching the UI buttons; response returns the generated text in the same call so the loading spinner can clear immediately on success.【F:docs/front-end-spec.md†L199-L211】【F:docs/prd.md†L592-L599】 |
+| `POST /api/v1/ai/suggestions/save` | Persist a generated suggestion to history with optional user notes/tags. | Stores the immediate generation response together with its filter/action metadata for Story 6.3 history retrieval.【F:docs/prd.md†L601-L609】 |
 | `GET /api/v1/ai/suggestions/history` | List saved suggestions for Faculty/Department Heads filtered by term, department, faculty. | Powers AI Assistant history tab (front-end spec Section 2). |
 | `DELETE /api/v1/ai/suggestions/{id}` | Soft delete a saved suggestion. | Retains audit trail for compliance. |
+
+`POST /api/v1/ai/suggestions` gathers the processed aggregates mandated in PRD Story 6.2 (`numerical_aggregates`, `sentiment_aggregates`, top sentiment-bearing keywords) before constructing the Persona-Context-Task-Format prompt for Gemini. While the call is in flight the UI disables all action buttons and shows a loading indicator, mirroring the front-end contract and ensuring only one synchronous invocation runs at a time.【F:docs/prd.md†L592-L599】 If Gemini times out or returns an error, the endpoint surfaces an actionable `503 Service Unavailable` (or domain-specific `gemini_unavailable`) payload so the client can present the friendly failure state described in the PRD.【F:docs/prd.md†L597-L599】
 
 #### **5.12 Bulk Imports & File Processing (Domain 12)**
 
