@@ -613,10 +613,11 @@ _UX Note: To improve the first-time user experience, the "Evaluation Management"
 -   **As a** Faculty or Department Head, **I want** to download my generated AI suggestions as a professional-looking document, **so that** I can easily share, print, or archive these insights for my records.
 -   **Acceptance Criteria:**
     1.  When AI suggestions are displayed, a "Download as PDF" button is visible.
-    2.  Clicking the button sends the content of the currently displayed suggestion to a backend endpoint.
-    3.  The backend uses the **WeasyPrint** library to render the text into a formatted PDF document.
-    4.  The PDF includes a clear header, the date, the context (filters used), and the full text of the suggestions.
-    5.  The generated PDF is returned to the user, initiating a file download in their browser.
+    2.  Clicking the button calls `POST /api/v1/ai/suggestions/{id}/export`, sending the rendered `content_markdown` plus a `context` payload that includes the suggestion title, generated timestamp, and any active filters (term, department, faculty, course, and assessment period).
+    3.  The backend uses the **WeasyPrint** library to render the content into a formatted PDF document that places the title and timestamp in the header and prints the filter summary ahead of the full suggestion text.
+    4.  The response streams the PDF back to the browser with `Content-Type: application/pdf` and an `attachment` `Content-Disposition` filename such as `ai-suggestion-<timestamp>.pdf` so standard download prompts appear.
+    5.  Each export request is rate limited to 5 attempts per user per 15 minutes to protect the shared WeasyPrint worker pool and match the AI run throttles.
+    6.  Successful exports append an `AI_SUGGESTION_EXPORTED` entry to the audit log, linking to the originating suggestion so history views show the export trail.
 
 ---
 
