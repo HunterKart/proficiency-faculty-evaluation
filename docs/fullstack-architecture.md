@@ -13,10 +13,9 @@ This is a **Greenfield project** to be built from scratch. While not based on a 
 
 #### **Change Log**
 
-| Date       | Version | Description                                                                                                                                                                   | Author             |
-| :--------- | :------ | :---------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | :----------------- |
-| 2025-10-05 | 1.1     | Completed the entire API Specification (Section 5) by integrating the final, refined specifications for all 11 domains. The document is now ready for database schema design. | Winston, Architect |
-| 2025-10-04 | 1.0     | Initial architectural draft based on PRD v6.2 and UI/UX Spec v2.0.                                                                                                            | Winston, Architect |
+| Date       | Version | Description                                                        | Author             |
+| :--------- | :------ | :----------------------------------------------------------------- | :----------------- |
+| 2025-10-04 | 1.0     | Initial architectural draft based on PRD v6.2 and UI/UX Spec v2.0. | Winston, Architect |
 
 ---
 
@@ -280,7 +279,7 @@ _This domain establishes the core identity and access management structure._
         username: string;
         email: string;
         password_hash: string;
-        admin_pin_code_hash?: string | null;
+        admin_pin_code_hash?: string | null; // intended for university-level admins and for multi-factor authentication; similar to the Super Admin PIN Code and requirement.
         last_name: string;
         first_name: string;
         middle_name?: string | null;
@@ -355,7 +354,7 @@ _This domain establishes the core identity and access management structure._
         username: string;
         email: string;
         password_hash: string;
-        super_admin_pin_code_hash: string;
+        super_admin_pin_code_hash: string; // utilized for multi-factor authentication
         last_name: string;
         first_name: string;
         middle_name?: string | null;
@@ -1172,6 +1171,8 @@ _This domain provides the essential, focused logging for compliance and security
 ---
 
 ### **Section 5: API Specification**
+
+This is where we need to continue and start.
 
 ---
 
