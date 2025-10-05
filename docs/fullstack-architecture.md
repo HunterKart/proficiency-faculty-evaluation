@@ -1198,8 +1198,15 @@ This section defines the FastAPI surface that powers the Proficiency platform. I
 | `POST /public/auth/reset-password` | Submit new password with reset token. | All roles | Enforces password policy defined in PRD (minimum length 10, complexity). |
 | `GET /api/v1/auth/me` | Fetch the authenticated user profile, active roles, department assignments, and feature flags. | All roles | Used by the role router (front-end spec Section 2). |
 | `PATCH /api/v1/auth/me` | Update profile fields (name, photo). | All roles | Rejects role or department mutations; those belong to admin flows. |
+| `POST /public/auth/registration-codes/validate` | Pre-validate a registration code before exposing the self-registration form. | Public | Returns remaining uses, intended role, and expiration metadata for the code so the UI can gate access. |
 | `POST /public/auth/self-registration` | Complete self-registration using a valid code and optional role selector. | Students, Faculty, Dept Heads | Validates code usage limits & intended role per FR1/FR11.【F:docs/prd.md†L61-L90】 |
 | `POST /api/v1/auth/resend-email-verification` | Resend verification email. | All roles | Rate limited per account. |
+
+-   **Registration Code Validation Contract**
+    -   **Request:** `POST /public/auth/registration-codes/validate` with body `{ "code": string, "university_slug": string }`. The slug maps to the tenant vanity URL, keeping the route unauthenticated while still resolving multi-tenancy.
+    -   **Response:** On success, return `{ "data": { "code": string, "role": string, "remaining_uses": int, "max_uses": int, "expires_at": string | null } }` allowing the frontend to render role pickers and capacity messaging before form entry.
+    -   **Error Handling:** Invalid, expired, or usage-exhausted codes return HTTP `400` with error codes `REGISTRATION_CODE_INVALID`, `REGISTRATION_CODE_EXPIRED`, or `REGISTRATION_CODE_USAGE_EXCEEDED` respectively so the UI can surface precise guidance.
+    -   **Rate Limiting & Observability:** Apply the Story 3.7 throttle (e.g., 5 attempts/minute per IP + code) and respond with HTTP `429`/`RATE_LIMIT_EXCEEDED` when exceeded.【F:docs/prd.md†L393-L408】 Log both successful and failed validations through the identity audit log stream and emit structured metrics for throttle hits to aid SOC monitoring.
 
 #### **5.3 University Onboarding & Tenant Administration (Domain 1)**
 
