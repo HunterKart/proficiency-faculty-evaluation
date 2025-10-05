@@ -1324,6 +1324,9 @@ All analytics endpoints enforce PRD requirement to exclude archived or pending-r
 -   `GET /api/v1/jobs`: Tenant-scoped view of background jobs (imports, report generation, period cancellation). Returns status, submitted/started/completed timestamps, and error file locations, mapping directly to the Admin "Import Job History" UI.【F:docs/fullstack-architecture.md†L889-L930】
 -   `GET /api/v1/jobs/{jobUuid}`: Poll the status of a specific job (used after file uploads or aggregate recalculations).
 -   `POST /api/v1/jobs/{jobUuid}/cancel`: Allow Admins to cancel long-running imports when permissible (status `queued` or `processing`).
+-   `POST /api/v1/jobs/{jobUuid}/retry`: Re-queue a failed report-generation job using its persisted request parameters. When invoked, the system creates a new job record linked back to the original, resets status indicators in listings to `queued`, and surfaces a `retry_parent_uuid` for traceability. The Admin history view collapses retries beneath the source job to avoid clutter while still exposing attempt counts.
+    -   Safeguards: Enforce a configurable maximum retry count (default `3`) tracked per job chain; reject retries if the job failed for permission issues or if the associated report definition has been deleted/disabled since the original attempt.
+    -   Worker expectations: Background workers must treat the retried job as a fresh execution—re-building secure download URLs, re-validating permissions and tenant scoping, and skipping artifact reuse to prevent duplicate or stale report downloads.【F:docs/fullstack-architecture.md†L889-L930】
 
 #### **5.11 AI Assistant & Suggestion History (Domain 11)**
 
