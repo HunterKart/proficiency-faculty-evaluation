@@ -1172,7 +1172,212 @@ _This domain provides the essential, focused logging for compliance and security
 
 ### **Section 5: API Specification**
 
-This is where we need to continue and start.
+This section defines the FastAPI surface that powers the Proficiency platform. It translates the domain models (Section 4) and the UX flows in the PRD/UI spec into concrete REST resources, ensuring the frontend can rely on a stable, well versioned contract while the worker orchestrates asynchronous processing. The API is delivered from the monolithic FastAPI service and all payloads are JSON unless stated otherwise.
+
+#### **5.1 Cross-Cutting Principles & Conventions**
+
+-   **Versioning & Base Path:** All authenticated routes live under `/api/v1`. Backwards-incompatible changes will be introduced behind a new prefix (`/api/v2`) and accompanied by regenerated TypeScript clients (Section 3). Public unauthenticated routes (e.g., university sign-up, health check) live under `/public`.
+-   **Content Negotiation:** Requests must send `Content-Type: application/json` and `Accept: application/json`. File uploads (imports, logos) use `multipart/form-data`. Responses standardize on UTF-8 encoded JSON.
+-   **Timezone & Formatting:** All timestamps returned to the UI are formatted in ISO 8601 and explicitly tagged with `+08:00` (Asia/Manila) to honor NFR8. Background compute timestamps that originate in UTC (e.g., worker job metadata) include a `time_zone` field so the frontend can label the source correctly.【F:docs/prd.md†L86-L98】【F:docs/fullstack-architecture.md†L888-L906】
+-   **Multi-Tenancy Scoping:** Tenant users infer their `university_id` from the signed JWT; Super Admins must supply `X-University-Id` when impersonating a tenant context. Every repository layer query must scope by `university_id` (Section 2).【F:docs/fullstack-architecture.md†L37-L55】
+-   **Response Envelope:** Every successful response follows `{ "data": ..., "meta": { ... } }`. List endpoints include `meta.pagination` (`page`, `page_size`, `total_items`, `total_pages`). Error responses standardize on `{ "error": { "code": string, "message": string, "details": [...] } }` with trace IDs propagated from OpenTelemetry.
+-   **Filtering & Sorting:** Collections accept `page` (default `1`), `page_size` (default `20`, max `100`), `sort` (comma separated fields, prefix `-` for desc), and `filter[<field>]` for exact matches. Search endpoints expose `q` for fuzzy text matching. All filters are validated against allow-lists per module to avoid SQL injection.
+-   **Optimistic Concurrency:** Mutable resources expose a `resource_version` derived from the row `updated_at` timestamp. Update and delete endpoints require `If-Match` headers; conflicts return HTTP `409` with a `RESOURCE_VERSION_MISMATCH` code to satisfy NFR9.【F:docs/prd.md†L129-L137】
+-   **Polling Cadence:** Because the frontend relies on polling (Section 2), every list endpoint supports `updated_since` to short-circuit unchanged payloads. Responses include `Cache-Control: no-store` to prevent stale dashboards.【F:docs/fullstack-architecture.md†L61-L78】
+-   **Validation & Nudges:** Request bodies use Pydantic validators enforcing PRD business rules (e.g., minimum open-ended word counts, Likert ranges). Validation errors are returned with HTTP `422` and surface human-friendly messages aligned with the UI copy in the front-end spec.
+
+#### **5.2 Authentication, Session & Profile Endpoints**
+
+| Method & Path | Description | Primary Roles | Notes |
+| :------------ | :---------- | :------------ | :---- |
+| `POST /api/v1/auth/login` | Exchange username/email + password for an access/refresh token pair. | All roles | Returns MFA challenge requirement when admin PIN/TOTP is enabled. |
+| `POST /api/v1/auth/mfa/challenge` | Verify a 6-digit TOTP or admin PIN when `login` indicates `mfa_required=true`. | Admin, Super Admin | Leverages PyOTP secrets stored per user (`admin_pin_code_hash`, `super_admin_pin_code_hash`).【F:docs/fullstack-architecture.md†L277-L320】 |
+| `POST /api/v1/auth/refresh` | Rotate an access token using a valid refresh token. | All roles | Refresh tokens are single-use and invalidated on logout. |
+| `POST /api/v1/auth/logout` | Revoke the active refresh token. | All roles | Idempotent. |
+| `POST /public/auth/forgot-password` | Initiate password reset email. | All roles | Sends signed, short-lived token via worker-triggered email job. |
+| `POST /public/auth/reset-password` | Submit new password with reset token. | All roles | Enforces password policy defined in PRD (minimum length 10, complexity). |
+| `GET /api/v1/auth/me` | Fetch the authenticated user profile, active roles, department assignments, and feature flags. | All roles | Used by the role router (front-end spec Section 2). |
+| `PATCH /api/v1/auth/me` | Update profile fields (name, photo). | All roles | Rejects role or department mutations; those belong to admin flows. |
+| `POST /public/auth/self-registration` | Complete self-registration using a valid code and optional role selector. | Students, Faculty, Dept Heads | Validates code usage limits & intended role per FR1/FR11.【F:docs/prd.md†L61-L90】 |
+| `POST /api/v1/auth/resend-email-verification` | Resend verification email. | All roles | Rate limited per account. |
+
+#### **5.3 University Onboarding & Tenant Administration (Domain 1)**
+
+| Method & Path | Description | Roles | Notes |
+| :------------ | :---------- | :---- | :---- |
+| `POST /public/university-registration-requests` | Submit onboarding request with institution contact data. | Public | Persists to `university_registration_requests`; queues notification to Super Admins.【F:docs/fullstack-architecture.md†L180-L220】 |
+| `GET /api/v1/super-admin/university-registration-requests` | Paginated review list with status filters. | Super Admin | Supports filtering by submission date and status. |
+| `PATCH /api/v1/super-admin/university-registration-requests/{id}` | Approve or reject a request with audit notes. | Super Admin | When approved, triggers `universities` record creation, default admin invite, and notification email per FR1. |
+| `GET /api/v1/super-admin/universities` | List tenant records and lifecycle statuses. | Super Admin | Includes aggregate health metrics (active users, active periods). |
+| `POST /api/v1/super-admin/universities` | Manually create a university tenant. | Super Admin | Optional when bypassing public request. |
+| `PATCH /api/v1/super-admin/universities/{id}` | Update tenant metadata or status (`active`, `inactive`, `closed`, `suspended`). | Super Admin | Enforces `resource_version`. |
+| `POST /api/v1/universities/{id}/logo` | Upload/update university logo. | Super Admin, Admin | Stores file path in `universities.logo_path` on local filesystem.【F:docs/fullstack-architecture.md†L162-L204】 |
+| `GET /api/v1/universities/{id}/registration-codes` | View active self-registration codes with usage counters & caps. | Admin | Supports FR10/FR11 role-based codes.【F:docs/prd.md†L115-L123】 |
+| `POST /api/v1/universities/{id}/registration-codes` | Create a role-specific code with max usage and expiration. | Admin | Rejects overlapping active codes for same role. |
+| `PATCH /api/v1/universities/{id}/registration-codes/{codeId}` | Update max usage or deactivate code. | Admin | Returns updated counters for frontend dashboards. |
+| `GET /api/v1/universities/{id}` | Fetch tenant profile, contact info, and current evaluation status summary. | Admin | Used on Admin dashboard hero card. |
+
+#### **5.4 Identity, Roles & Department Management (Domain 2)**
+
+-   **Users & Roles**
+    -   `GET /api/v1/users`: List users filtered by role, status, department, or search (`q`). Default sort `last_name ASC`.
+    -   `POST /api/v1/users`: Create a user manually (admin-created). Requires specifying at least one role and department assignment.
+    -   `PATCH /api/v1/users/{userId}`: Update profile, status, or reset MFA. Enforces optimistic locking.
+    -   `POST /api/v1/users/{userId}/roles`: Attach a new role; automatically provisions default navigation preferences.
+    -   `DELETE /api/v1/users/{userId}/roles/{userRoleId}`: Soft revoke a role, recording `revoked_at`.
+-   **Department & Program Assignment**
+    -   `GET /api/v1/departments`: List departments with nested head assignments and program counts.
+    -   `POST /api/v1/departments`, `PATCH /api/v1/departments/{id}`: CRUD with validations for unique name/acronym.
+    -   `GET /api/v1/departments/{id}/members`: Retrieve active users for department head dashboards (supports tabbed views in front-end spec Section 2).
+    -   `POST /api/v1/users/{userId}/department-assignments`: Assign a user to a department/program with effective dates.
+    -   `PATCH /api/v1/users/{userId}/department-assignments/{assignmentId}`: Deactivate or modify assignments.
+-   **Super Admin User Management**
+    -   `GET /api/v1/super-admin/users`: Manage platform-level operators.
+    -   `POST /api/v1/super-admin/users`: Provision new super admins, forcing MFA enrollment on first login.
+
+All identity endpoints emit audit logs (Section 13) and enforce FR1 multi-role support.【F:docs/prd.md†L61-L72】
+
+#### **5.5 Academic Structure & Enrollment (Domain 3)**
+
+| Method & Path | Description | Notes |
+| :------------ | :---------- | :---- |
+| `GET /api/v1/programs` | Paginated list with optional `filter[department_id]`, `filter[is_active]`. | Used by Admin "Academic Structure" tab (front-end spec Section 2). |
+| `POST /api/v1/programs` / `PATCH /api/v1/programs/{id}` | Manage program catalog. | Validates uniqueness of `program_code`. |
+| `GET /api/v1/subjects` | Searchable catalog, supports `filter[department_id]` & `filter[program_id]`. | Provides metadata for form assignment and imports. |
+| `POST /api/v1/subjects`, `PATCH /api/v1/subjects/{id}` | CRUD subject definitions. | Updates propagate to worker recalculation queue for active periods. |
+| `POST /api/v1/programs/{id}/subjects` | Bulk attach/detach subjects to a program. | Accepts payload `{ add: [], remove: [] }`. |
+| `GET /api/v1/school-terms` | List academic terms for scheduling UI. | Sorted by `start_school_year DESC`. |
+| `POST /api/v1/school-terms`, `PATCH /api/v1/school-terms/{id}` | Manage term definitions. | Prevents overlapping semesters. |
+| `GET /api/v1/subject-offerings` | Supports filters by term, department, faculty, status; includes enrollment counts. | Powers Admin Explore Data filters. |
+| `POST /api/v1/subject-offerings` | Create a section/class. | Accepts optional faculty assignment and schedule metadata. |
+| `PATCH /api/v1/subject-offerings/{id}` | Update schedule, instructor, status. | When instructor changes, writes to `subject_offering_faculty_history`. |
+| `POST /api/v1/subject-offerings/{id}/enrollments` | Bulk enroll students via JSON array of `user_id`s. | Validates against duplicate active enrollment. |
+| `DELETE /api/v1/enrollments/{enrollmentId}` | Soft-drop enrollment with optional reason. | Supports FR12 grace period by leaving evaluation records accessible. |
+| `GET /api/v1/enrollments` | Retrieve a student's active and historical section memberships. | Drives student dashboard context. |
+
+#### **5.6 Evaluation Form Authoring (Domain 4)**
+
+-   `GET /api/v1/likert-scale-templates`: List defined Likert scales for reuse.
+-   `POST /api/v1/likert-scale-templates`: Create a scale; validates range and label uniqueness.
+-   `GET /api/v1/form-templates`: Paginated list with filters by status (`draft`, `active`, `assigned`, `archived`) and intended audience (students, department heads) to satisfy FR2.【F:docs/prd.md†L72-L84】【F:docs/fullstack-architecture.md†L560-L615】
+-   `POST /api/v1/form-templates`: Create a template with nested criteria/questions. Supports dry-run validation returning warnings about weight totals or orphaned questions.
+-   `GET /api/v1/form-templates/{id}`: Fetch a template with nested structure for the form builder UI.
+-   `PATCH /api/v1/form-templates/{id}`: Update template metadata, criteria, or questions when status is `draft` or `active`. Enforces optimistic locking and recalculates weight totals.
+-   `POST /api/v1/form-templates/{id}/clone`: Duplicate a template into `draft` for iterative edits.
+-   `POST /api/v1/form-templates/{id}/status`: Transition statuses (e.g., `draft` → `active`, `active` → `assigned`). Prevents edits after `assigned` per FR2.
+-   `GET /api/v1/form-templates/{id}/preview`: Returns a render-ready representation for the front-end preview dialog.
+
+#### **5.7 Evaluation Scheduling & Period Operations (Domain 5)**
+
+| Method & Path | Description | Notes |
+| :------------ | :---------- | :---- |
+| `GET /api/v1/evaluation-periods` | List periods with filters by status, term, assessment period. | Used in Admin dashboards and to power the "Cancel Period" safeguard (PRD v6.2). |
+| `POST /api/v1/evaluation-periods` | Create a period, linking to `school_term` and default timezone PST. | Validates non-overlap for same cohort. |
+| `GET /api/v1/evaluation-periods/{id}` | Fetch detail with assigned forms, eligible cohorts, and cancellation metadata. | Includes `cancelling_started_at` to support FR4 review flows.【F:docs/fullstack-architecture.md†L622-L679】 |
+| `PATCH /api/v1/evaluation-periods/{id}` | Edit schedule while status is `scheduled`. | Requires `If-Match`. |
+| `POST /api/v1/evaluation-periods/{id}/activate` | Set status to `active`, generating evaluation assignments for all eligible users. | Returns counts by role for front-end progress indicators. |
+| `POST /api/v1/evaluation-periods/{id}/cancel` | Initiate cancel flow (status `cancelling`) and enqueue `period_cancellation` job. | Worker updates status to `cancelled` when job completes. |
+| `POST /api/v1/evaluation-periods/{id}/finalize` | Trigger final aggregation (`is_final_snapshot=true`) and lock results per FR8. | Enqueues background job; response includes job UUID. |
+| `GET /api/v1/evaluation-periods/{id}/eligibility` | Preview subject offerings and enrollments impacted before activation. | Helps Admin confirm scope. |
+
+Assignments between forms and cohorts (students, department heads) are modeled via `evaluation_period_assignments` (Domain 5) and exposed through `POST /api/v1/evaluation-periods/{id}/assignments` for bulk updates (payload specifying subject offerings, target roles, and templates).
+
+#### **5.8 Evaluation Submissions, Integrity & Flag Workflow (Domains 6–8)**
+
+-   **Submission Lifecycle**
+    -   `GET /api/v1/evaluation-assignments`: Return pending/completed tasks for the authenticated evaluator, supporting Student dashboard tabs (front-end spec Section 2). Supports toggling view mode metadata for cards vs. table.
+    -   `GET /api/v1/evaluation-assignments/{id}`: Fetch the renderable form, including Likert questions, open-ended prompts, and pre-submission guidance copy (PRD FR3).
+    -   `POST /api/v1/evaluation-assignments/{id}/submit`: Persist Likert answers and open-ended responses, capturing time-on-form metrics and UI nudge acknowledgements. Returns `submission_id` and asynchronous job ID for integrity processing.【F:docs/prd.md†L84-L110】【F:docs/fullstack-architecture.md†L680-L738】
+    -   `GET /api/v1/evaluation-submissions/{id}`: View submission detail (for review history or flagged context). Includes computed integrity indicators (variance score, word counts).
+    -   `PATCH /api/v1/evaluation-submissions/{id}`: Allow resubmission updates when flagged and within the 48-hour grace window per FR12.【F:docs/prd.md†L123-L131】
+-   **Integrity & Flagging**
+    -   `GET /api/v1/evaluation-submissions/{id}/integrity-report`: Returns low-variance, sentiment-coherence, and recycled-content diagnostics generated by the worker (Domain 7). Includes `flag_reasons` enumerations and similarity scores.【F:docs/fullstack-architecture.md†L739-L804】
+    -   `GET /api/v1/flagged-evaluations`: Paginated admin view of submissions with unresolved flags; supports filtering by flag type and status (`pending_review`, `resubmission_requested`, `archived`, `approved`). | Aligns with FR4 review dashboard.
+    -   `POST /api/v1/flagged-evaluations/{id}/resolve`: Admin resolution endpoint accepting `action` (`approve`, `archive`, `request_resubmission`) and optional notes. Auto-enqueues aggregate recalculation job on `approve` (FR4/FR8).
+    -   `POST /api/v1/flagged-evaluations/{id}/remind`: Sends anonymous notification to student explaining decision, satisfying FR4.1.
+    -   `GET /api/v1/evaluation-submissions/{id}/history`: Shows resubmission timeline, grace period deadline, and worker status updates to support transparency for Admins and Department Heads.
+-   **Publication States**
+    -   `GET /api/v1/evaluation-submissions/{id}/publication`: Exposes whether submission contributes to provisional/final aggregates per Domain 7 & 9 rules (excludes `archived`/`pending review`).【F:docs/prd.md†L96-L118】
+
+#### **5.9 Analytics, Dashboards & Snapshot Retrieval (Domain 9)**
+
+The analytics layer exposes role-specific view models assembled from `numerical_aggregates`, `sentiment_aggregates`, and raw submissions.
+
+-   `GET /api/v1/dashboard/student`: Returns pending vs. completed counts, submission history, and personal feedback trend (line chart data). Supports toggling active period filter per front-end spec.
+-   `GET /api/v1/dashboard/faculty`: Provides quantitative and qualitative summaries for the logged-in faculty member, including 60/40 weighted score, criterion breakdown, sentiment distribution, word cloud keywords, and time-series data for trend charts.【F:docs/prd.md†L96-L110】【F:docs/front-end-spec.md†L40-L79】
+-   `GET /api/v1/dashboard/department-head`: Aggregates department-wide metrics with ability to drill into specific faculty or subjects. Accepts `mode` query (`overview`, `faculty`, `subject`) aligning with Explore Data tab interactions.
+-   `GET /api/v1/dashboard/admin`: Supplies institution-wide KPIs (participation rate, flagged volume, AI suggestion usage) and evaluation behavior charts (FR7).
+-   `GET /api/v1/dashboard/super-admin`: Shows platform-level metrics (number of active tenants, queued jobs) leveraging multi-tenant data.
+-   `GET /api/v1/analytics/aggregates`: Low-level endpoint allowing Admins to request aggregate data by cohort parameters (term, department, faculty, form). Supports `snapshot=provisional|final` and `include_final_only` flag to satisfy FR8.
+-   `GET /api/v1/analytics/keywords`: Returns processed keyword arrays for word clouds (echarts-wordcloud input). Accepts `limit`, `min_score` parameters.
+-   `GET /api/v1/analytics/comments`: Provides anonymized comment samples for Explore Data drill-down with pagination and filters for sentiment label or flag status.
+-   `GET /api/v1/analytics/compare`: Accepts payload specifying two cohorts to compare; backend returns normalized deltas for UI comparisons.
+-   `POST /api/v1/reports/generate`: Triggers asynchronous report generation (PDF/CSV) using worker job `report_generation`; response returns job UUID and eventual download URL.
+
+All analytics endpoints enforce PRD requirement to exclude archived or pending-review submissions from aggregates (FR5.1).【F:docs/prd.md†L100-L108】
+
+#### **5.10 Notifications, Messaging & Job Tracking (Domains 9–10)**
+
+-   `GET /api/v1/notifications`: Fetch unread and historical notifications for the logged-in user. Supports `filter[read]=false` and pagination for the inbox component.
+-   `POST /api/v1/notifications/{id}/read`: Mark as read; idempotent.
+-   `POST /api/v1/notifications/read-all`: Bulk mark notifications read (used when user clicks "Mark all as read").
+-   `GET /api/v1/jobs`: Tenant-scoped view of background jobs (imports, report generation, period cancellation). Returns status, submitted/started/completed timestamps, and error file locations, mapping directly to the Admin "Import Job History" UI.【F:docs/fullstack-architecture.md†L889-L930】
+-   `GET /api/v1/jobs/{jobUuid}`: Poll the status of a specific job (used after file uploads or aggregate recalculations).
+-   `POST /api/v1/jobs/{jobUuid}/cancel`: Allow Admins to cancel long-running imports when permissible (status `queued` or `processing`).
+
+#### **5.11 AI Assistant & Suggestion History (Domain 11)**
+
+| Method & Path | Description | Notes |
+| :------------ | :---------- | :---- |
+| `POST /api/v1/ai/suggestions/run` | Initiate Gemini-powered suggestion generation for a specified cohort (faculty, department). | Worker pulls job, anonymizes payload per Section 17, and caches result in Redis for 6 hours to control costs (Section 7). |
+| `GET /api/v1/ai/suggestions/run/{runId}` | Fetch the status and output of a generation request. | Returns `pending`, `completed`, `failed` plus generated text when ready. |
+| `POST /api/v1/ai/suggestions/{runId}/save` | Persist a generated suggestion to history with optional user notes/tags. | Creates `ai_suggestions` record linked to run. |
+| `GET /api/v1/ai/suggestions/history` | List saved suggestions for Faculty/Department Heads filtered by term, department, faculty. | Powers AI Assistant history tab (front-end spec Section 2). |
+| `DELETE /api/v1/ai/suggestions/{id}` | Soft delete a saved suggestion. | Retains audit trail for compliance. |
+
+#### **5.12 Bulk Imports & File Processing (Domain 12)**
+
+-   `POST /api/v1/imports/{importType}`: Upload CSV/XLSX for `academic_structure`, `users`, `enrollments`, or `evaluations`. Accepts `multipart/form-data` with file and optional dedupe key. Returns background job UUID and provisional `import_batch_id`.
+-   `GET /api/v1/imports`: List prior batches with filters for `import_type`, `status`, and submission window. Includes success/error counts for the Admin Import Job History view (front-end spec Section 2).
+-   `GET /api/v1/imports/{batchId}`: Detailed batch view including summary stats, source filename, dedupe indicator, and job linkage.
+-   `GET /api/v1/imports/{batchId}/rows`: Paginated detail of parsed rows with status and diagnostic messages. Supports `filter[status]` and `search` for row-level troubleshooting.
+-   `GET /api/v1/imports/{batchId}/error-report` & `/result-file`: Authenticated download endpoints for worker-produced CSV/zip artifacts.
+-   `POST /api/v1/imports/{batchId}/retry` : Re-queue failed rows after Admin fixes the source file or overrides validation.
+
+All import endpoints stream uploads directly to disk, enqueue parsing jobs, and surface validation issues via `import_row_issues`, fulfilling FR9.【F:docs/prd.md†L108-L115】【F:docs/fullstack-architecture.md†L1025-L1114】
+
+#### **5.13 Data Governance, Audit & Platform Utilities (Domain 13)**
+
+-   `GET /api/v1/audit-logs`: Tenant-scoped audit trail supporting filters by user, resource type, or date range. Underpins compliance with the Data Privacy Act (NFR7).【F:docs/prd.md†L118-L126】【F:docs/fullstack-architecture.md†L1118-L1160】
+-   `GET /api/v1/audit-logs/{id}`: Detailed view of request metadata, before/after snapshots, and originating IP.
+-   `GET /api/v1/health` (public): Lightweight readiness probe returning component statuses (`database`, `redis`, `worker_queue_depth`). Used by Caddy health checks.
+-   `GET /api/v1/metadata`: Returns enumerations and feature flag settings (e.g., evaluation statuses, flag types) for front-end bootstrapping. Cached aggressively since it changes infrequently.
+-   `GET /api/v1/system/time` (public): Returns current server time in PST to assist clients with countdown timers (e.g., resubmission grace period countdown).
+
+#### **5.14 Error Codes & Rate Limiting**
+
+The API centralizes error codes in an enumeration shared with the generated TypeScript client. Key categories:
+
+-   `AUTH_INVALID_CREDENTIALS`, `AUTH_MFA_REQUIRED`, `AUTH_CODE_EXPIRED`
+-   `TENANT_SUSPENDED`, `UNIVERSITY_NOT_FOUND`
+-   `FORM_STATUS_LOCKED`, `FORM_WEIGHT_MISMATCH`
+-   `PERIOD_ALREADY_ACTIVE`, `PERIOD_CANCELLATION_IN_PROGRESS`
+-   `SUBMISSION_FLAGGED_LOCKED`, `RESUBMISSION_WINDOW_EXPIRED`
+-   `IMPORT_DUPLICATE_BATCH`, `IMPORT_VALIDATION_FAILED`
+
+Rate limiting is enforced via Redis sliding windows:
+
+-   Public auth endpoints: `10` attempts per IP per 15 minutes.
+-   AI suggestion runs: `5` concurrent per department head/faculty to satisfy NFR3 performance guardrails.【F:docs/prd.md†L110-L118】
+-   Report generation: `3` queued reports per tenant to protect worker resources.
+
+#### **5.15 OpenAPI & Client Generation**
+
+-   The FastAPI app publishes interactive docs at `/docs` in non-production environments and serves the JSON schema at `/openapi.json`.
+-   A CI job regenerates the TypeScript SDK using `openapi-typescript-codegen` on every backend merge (Section 3). Generated types live in the shared `api-client` workspace consumed by the frontend.
+-   Shared enums (statuses, roles, error codes) are sourced from the OpenAPI schema to ensure parity across stacks.
+
+This API surface gives every UI screen in the front-end specification a deterministic contract, while ensuring the asynchronous worker and AI integrations mandated in the PRD remain loosely coupled yet observable.
 
 ---
 
