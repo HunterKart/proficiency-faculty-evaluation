@@ -920,7 +920,8 @@ _This domain defines the data warehousing and processing layer where raw data is
         | "user_enrollment_import"
         | "evaluation_import"
         | "period_cancellation"
-        | "report_generation";
+        | "report_generation"
+        | "ai_suggestion_pdf_export";
 
     export type JobStatus =
         | "queued"
@@ -1019,6 +1020,52 @@ _This domain models the "AI Assistant" feature, logging generation events and sa
         updated_at: string; // ISO timestamp
     }
     ```
+
+**3. `ai_suggestion_export_events` (New)**
+
+-   **Purpose:** Captures each user-initiated PDF export so history and compliance views can surface an audit trail.
+
+-   **TypeScript Interface:**
+
+    ```ts
+    export interface AISuggestionExportEvent {
+        export_event_id: number;
+        ai_suggestion_id: number;
+        background_job_id: number;
+        exported_by_user_id: number;
+        exported_at: string; // ISO timestamp
+        filename: string;
+        filters_json: string; // serialized context payload shown in the PDF header
+        request_ip?: string | null;
+    }
+    ```
+
+-   `ai_suggestions.last_export_job_id` caches the latest successful `background_job_id` so the UI can link to the export artifact without scanning the events table.
+
+**Export endpoint payload.** `POST /api/v1/ai/suggestions/{id}/export` accepts:
+
+```json
+{
+    "content_markdown": "# ...",
+    "context": {
+        "title": "Growth Plan for Prof. Santos",
+        "generated_at": "2025-03-12T04:18:00Z",
+        "filters": {
+            "term": "SY2024-2025 Term 2",
+            "department": "Mathematics",
+            "faculty": "Prof. Maria Santos",
+            "course": "Calculus I",
+            "assessment_period": "midterm"
+        }
+    }
+}
+```
+
+`filters` keys are optional but persisted verbatim to `filters_json` and expanded in the PDF context summary.
+
+**Export rendering requirements.** The WeasyPrint template renders three blocks in order: (1) a fixed header with the suggestion title, institution name, and ISO timestamp, (2) a context summary that expands the filters JSON into bullet points (term, department, faculty, course, assessment period), and (3) the full Markdown-to-HTML converted suggestion body. The PDF footer includes the platform name and page numbers handled by the shared layout template.
+
+**Browser delivery.** The API returns a FastAPI `StreamingResponse` with `Content-Type: application/pdf`, `Content-Disposition: attachment; filename="ai-suggestion-<timestamp>.pdf"`, and `Cache-Control: no-store` so browsers immediately prompt for download without caching sensitive content.
 
 ---
 
@@ -1154,7 +1201,8 @@ _This domain provides the essential, focused logging for compliance and security
         | "ACADEMIC_STRUCTURE_MODIFIED"
         | "EVALUATION_PERIOD_CANCELLED"
         | "FLAGGED_EVALUATION_RESOLVED"
-        | "RESUBMISSION_GRANTED";
+        | "RESUBMISSION_GRANTED"
+        | "AI_SUGGESTION_EXPORTED";
 
     export interface AdminActionLog {
         log_id: number;
@@ -1167,6 +1215,8 @@ _This domain provides the essential, focused logging for compliance and security
         created_at: string; // ISO timestamp
     }
     ```
+
+-   `AI_SUGGESTION_EXPORTED` entries capture the suggestion ID, export filename, and filters summary so compliance reviewers can correlate downloads with history access.
 
 ---
 
@@ -1333,6 +1383,7 @@ All analytics endpoints enforce PRD requirement to exclude archived or pending-r
 | `GET /api/v1/ai/suggestions/run/{runId}` | Fetch the status and output of a generation request. | Returns `pending`, `completed`, `failed` plus generated text when ready. |
 | `POST /api/v1/ai/suggestions/{runId}/save` | Persist a generated suggestion to history with optional user notes/tags. | Creates `ai_suggestions` record linked to run. |
 | `GET /api/v1/ai/suggestions/history` | List saved suggestions for Faculty/Department Heads filtered by term, department, faculty. | Powers AI Assistant history tab (front-end spec Section 2). |
+| `POST /api/v1/ai/suggestions/{id}/export` | Generate a WeasyPrint PDF for a saved suggestion using the provided `content_markdown` and `context` (`title`, `generatedAt`, `filters`). | Returns `StreamingResponse` with `Content-Type: application/pdf` and `Content-Disposition: attachment; filename="ai-suggestion-<timestamp>.pdf"`. Enqueues `ai_suggestion_pdf_export` job for traceability and logs `AI_SUGGESTION_EXPORTED`. |
 | `DELETE /api/v1/ai/suggestions/{id}` | Soft delete a saved suggestion. | Retains audit trail for compliance. |
 
 #### **5.12 Bulk Imports & File Processing (Domain 12)**
@@ -1369,6 +1420,7 @@ Rate limiting is enforced via Redis sliding windows:
 
 -   Public auth endpoints: `10` attempts per IP per 15 minutes.
 -   AI suggestion runs: `5` concurrent per department head/faculty to satisfy NFR3 performance guardrails.【F:docs/prd.md†L110-L118】
+-   AI suggestion exports: `5` per user per 15 minutes, aligning with PRD Story 6.4 and throttling WeasyPrint workload while ensuring audit completeness via export events.【F:docs/prd.md†L613-L627】
 -   Report generation: `3` queued reports per tenant to protect worker resources.
 
 #### **5.15 OpenAPI & Client Generation**
