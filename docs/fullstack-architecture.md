@@ -1284,11 +1284,14 @@ All identity endpoints emit audit logs (Section 13) and enforce FR1 multi-role s
 | `GET /api/v1/evaluation-periods/{id}` | Fetch detail with assigned forms, eligible cohorts, and cancellation metadata. | Includes `cancelling_started_at` to support FR4 review flows.【F:docs/fullstack-architecture.md†L622-L679】 |
 | `PATCH /api/v1/evaluation-periods/{id}` | Edit schedule while status is `scheduled`. | Requires `If-Match`. |
 | `POST /api/v1/evaluation-periods/{id}/activate` | Set status to `active`, generating evaluation assignments for all eligible users. | Returns counts by role for front-end progress indicators. |
-| `POST /api/v1/evaluation-periods/{id}/cancel` | Initiate cancel flow (status `cancelling`) and enqueue `period_cancellation` job. | Worker updates status to `cancelled` when job completes. |
+| `POST /api/v1/evaluation-periods/{id}/cancel` | Initiate cancel flow (status `cancelling`) and enqueue `period_cancellation` job. | Response returns the background job UUID plus `cancelling_started_at` and `undo_deadline_at` timestamps for the undo toast. Worker updates status to `cancelled` when job completes unless undone. |
+| `POST /api/v1/jobs/{jobUuid}/cancel` | Abort an enqueued `period_cancellation` job prior to worker execution. | Enforces tenant scoping and Admin/Super Admin role checks. Succeeds only while job state is `queued`; transitions period back to `active`. |
 | `POST /api/v1/evaluation-periods/{id}/finalize` | Trigger final aggregation (`is_final_snapshot=true`) and lock results per FR8. | Enqueues background job; response includes job UUID. |
 | `GET /api/v1/evaluation-periods/{id}/eligibility` | Preview subject offerings and enrollments impacted before activation. | Helps Admin confirm scope. |
 
 Assignments between forms and cohorts (students, department heads) are modeled via `evaluation_period_assignments` (Domain 5) and exposed through `POST /api/v1/evaluation-periods/{id}/assignments` for bulk updates (payload specifying subject offerings, target roles, and templates).
+
+Period cancellation jobs are picked up by the worker after an average delay of ~15 seconds. During this window the period remains in `cancelling` state for front-end "Cancelling…" messaging. Successful undo via the job cancel endpoint reverts the state to `active`; otherwise, once the worker starts processing the state advances to `cancelled` and further abort attempts are rejected.
 
 #### **5.8 Evaluation Submissions, Integrity & Flag Workflow (Domains 6–8)**
 
