@@ -800,6 +800,27 @@ _This domain covers how raw text feedback is processed and prepared for safe, an
     }
     ```
 
+**4. `integrity_highlight_spans`**
+
+-   **Purpose:** Stores anonymized excerpts pinpointing the parts of a submission that triggered integrity diagnostics, enabling both Admin review tools and the student resubmission flow to render consistent highlights.
+-   **TypeScript Interface:**
+    ```ts
+    export interface IntegrityHighlightSpan {
+        integrity_highlight_id: number;
+        submission_id: number;
+        question_id: number;
+        text_answer_id?: number | null;
+        highlight_reason: "LOW_CONFIDENCE" | "RECYCLED_CONTENT" | "SENTIMENT_MISMATCH" | "OTHER";
+        start_index: number; // character index in stored text response
+        end_index: number; // exclusive character index
+        snippet: string; // sanitized excerpt safe for display
+        anonymization_version: number; // increments when redaction logic changes
+        created_at: string; // ISO timestamp
+        updated_at: string; // ISO timestamp
+    }
+    ```
+-   **Anonymization Rules:** Snippets are truncated to ≤240 characters, strip email addresses and names detected by the PII scrubber, and are only persisted when the associated response meets the same N ≥ 3 anonymity threshold as `evaluation_text_answers_published`.
+
 ---
 
 #### **Domain 8 (Simplified): Flags & Resubmission**
@@ -829,6 +850,30 @@ _This domain models the data integrity workflow for flagging and resolving low-q
         updated_at: string; // ISO timestamp
     }
     ```
+
+**Integrity Report Response Shape**
+
+-   **Purpose:** Defines the payload returned by `GET /api/v1/evaluation-submissions/{id}/integrity-report`, ensuring both admin reviewers and student resubmission screens can deterministically render diagnostics and highlights.
+-   **TypeScript Interface:**
+    ```ts
+    export interface IntegrityReportResponse {
+        submission_id: number;
+        flag_reasons: Array<{
+            code: "LOW_CONFIDENCE" | "RECYCLED_CONTENT" | "SENTIMENT_MISMATCH" | "OTHER";
+            severity: "info" | "warning" | "critical";
+            message: string;
+        }>;
+        diagnostics: Array<{
+            metric: "variance" | "sentiment" | "similarity" | string;
+            score: number | null;
+            threshold: number | null;
+            status: "pass" | "fail" | "attention";
+            context?: Record<string, unknown>;
+        }>;
+        highlights: IntegrityHighlightSpan[];
+    }
+    ```
+-   **Notes:** `highlights` is ordered by `question_id` then `start_index` to simplify UI grouping. Multiple spans per question are allowed, and the client should respect `anonymization_version` to invalidate cached renderings if redaction rules change.
 
 ---
 
@@ -1198,8 +1243,15 @@ This section defines the FastAPI surface that powers the Proficiency platform. I
 | `POST /public/auth/reset-password` | Submit new password with reset token. | All roles | Enforces password policy defined in PRD (minimum length 10, complexity). |
 | `GET /api/v1/auth/me` | Fetch the authenticated user profile, active roles, department assignments, and feature flags. | All roles | Used by the role router (front-end spec Section 2). |
 | `PATCH /api/v1/auth/me` | Update profile fields (name, photo). | All roles | Rejects role or department mutations; those belong to admin flows. |
+| `POST /public/auth/registration-codes/validate` | Pre-validate a registration code before exposing the self-registration form. | Public | Returns remaining uses, intended role, and expiration metadata for the code so the UI can gate access. |
 | `POST /public/auth/self-registration` | Complete self-registration using a valid code and optional role selector. | Students, Faculty, Dept Heads | Validates code usage limits & intended role per FR1/FR11.【F:docs/prd.md†L61-L90】 |
 | `POST /api/v1/auth/resend-email-verification` | Resend verification email. | All roles | Rate limited per account. |
+
+-   **Registration Code Validation Contract**
+    -   **Request:** `POST /public/auth/registration-codes/validate` with body `{ "code": string, "university_slug": string }`. The slug maps to the tenant vanity URL, keeping the route unauthenticated while still resolving multi-tenancy.
+    -   **Response:** On success, return `{ "data": { "code": string, "role": string, "remaining_uses": int, "max_uses": int, "expires_at": string | null } }` allowing the frontend to render role pickers and capacity messaging before form entry.
+    -   **Error Handling:** Invalid, expired, or usage-exhausted codes return HTTP `400` with error codes `REGISTRATION_CODE_INVALID`, `REGISTRATION_CODE_EXPIRED`, or `REGISTRATION_CODE_USAGE_EXCEEDED` respectively so the UI can surface precise guidance.
+    -   **Rate Limiting & Observability:** Apply the Story 3.7 throttle (e.g., 5 attempts/minute per IP + code) and respond with HTTP `429`/`RATE_LIMIT_EXCEEDED` when exceeded.【F:docs/prd.md†L393-L408】 Log both successful and failed validations through the identity audit log stream and emit structured metrics for throttle hits to aid SOC monitoring.
 
 #### **5.3 University Onboarding & Tenant Administration (Domain 1)**
 
@@ -1221,10 +1273,11 @@ This section defines the FastAPI surface that powers the Proficiency platform. I
 
 -   **Users & Roles**
     -   `GET /api/v1/users`: List users filtered by role, status, department, or search (`q`). Default sort `last_name ASC`.
-    -   `POST /api/v1/users`: Create a user manually (admin-created). Requires specifying at least one role and department assignment.
+    -   **V1 provisioning constraint:** Tenant Admins must onboard users through the bulk import pipeline (`POST /api/v1/imports/users`, Section 5.12) or by distributing invitation codes that drive the self-registration flow (`POST /public/auth/self-registration`, Section 5.2) to stay compliant with FR1.
     -   `PATCH /api/v1/users/{userId}`: Update profile, status, or reset MFA. Enforces optimistic locking.
     -   `POST /api/v1/users/{userId}/roles`: Attach a new role; automatically provisions default navigation preferences.
     -   `DELETE /api/v1/users/{userId}/roles/{userRoleId}`: Soft revoke a role, recording `revoked_at`.
+    -   **Post-V1 roadmap:** A manual single-user provisioning endpoint (`POST /api/v1/users`) may be introduced later with additional guardrails once FR1's bulk/self-service flows are firmly established.
 -   **Department & Program Assignment**
     -   `GET /api/v1/departments`: List departments with nested head assignments and program counts.
     -   `POST /api/v1/departments`, `PATCH /api/v1/departments/{id}`: CRUD with validations for unique name/acronym.
@@ -1276,11 +1329,14 @@ All identity endpoints emit audit logs (Section 13) and enforce FR1 multi-role s
 | `GET /api/v1/evaluation-periods/{id}` | Fetch detail with assigned forms, eligible cohorts, and cancellation metadata. | Includes `cancelling_started_at` to support FR4 review flows.【F:docs/fullstack-architecture.md†L622-L679】 |
 | `PATCH /api/v1/evaluation-periods/{id}` | Edit schedule while status is `scheduled`. | Requires `If-Match`. |
 | `POST /api/v1/evaluation-periods/{id}/activate` | Set status to `active`, generating evaluation assignments for all eligible users. | Returns counts by role for front-end progress indicators. |
-| `POST /api/v1/evaluation-periods/{id}/cancel` | Initiate cancel flow (status `cancelling`) and enqueue `period_cancellation` job. | Worker updates status to `cancelled` when job completes. |
+| `POST /api/v1/evaluation-periods/{id}/cancel` | Initiate cancel flow (status `cancelling`) and enqueue `period_cancellation` job. | Response returns the background job UUID plus `cancelling_started_at` and `undo_deadline_at` timestamps for the undo toast. Worker updates status to `cancelled` when job completes unless undone. |
+| `POST /api/v1/jobs/{jobUuid}/cancel` | Abort an enqueued `period_cancellation` job prior to worker execution. | Enforces tenant scoping and Admin/Super Admin role checks. Succeeds only while job state is `queued`; transitions period back to `active`. |
 | `POST /api/v1/evaluation-periods/{id}/finalize` | Trigger final aggregation (`is_final_snapshot=true`) and lock results per FR8. | Enqueues background job; response includes job UUID. |
 | `GET /api/v1/evaluation-periods/{id}/eligibility` | Preview subject offerings and enrollments impacted before activation. | Helps Admin confirm scope. |
 
 Assignments between forms and cohorts (students, department heads) are modeled via `evaluation_period_assignments` (Domain 5) and exposed through `POST /api/v1/evaluation-periods/{id}/assignments` for bulk updates (payload specifying subject offerings, target roles, and templates).
+
+Period cancellation jobs are picked up by the worker after an average delay of ~15 seconds. During this window the period remains in `cancelling` state for front-end "Cancelling…" messaging. Successful undo via the job cancel endpoint reverts the state to `active`; otherwise, once the worker starts processing the state advances to `cancelled` and further abort attempts are rejected.
 
 #### **5.8 Evaluation Submissions, Integrity & Flag Workflow (Domains 6–8)**
 
@@ -1291,7 +1347,7 @@ Assignments between forms and cohorts (students, department heads) are modeled v
     -   `GET /api/v1/evaluation-submissions/{id}`: View submission detail (for review history or flagged context). Includes computed integrity indicators (variance score, word counts).
     -   `PATCH /api/v1/evaluation-submissions/{id}`: Allow resubmission updates when flagged and within the 48-hour grace window per FR12.【F:docs/prd.md†L123-L131】
 -   **Integrity & Flagging**
-    -   `GET /api/v1/evaluation-submissions/{id}/integrity-report`: Returns low-variance, sentiment-coherence, and recycled-content diagnostics generated by the worker (Domain 7). Includes `flag_reasons` enumerations and similarity scores.【F:docs/fullstack-architecture.md†L739-L804】
+    -   `GET /api/v1/evaluation-submissions/{id}/integrity-report`: Returns low-variance, sentiment-coherence, and recycled-content diagnostics generated by the worker (Domain 7). Includes `flag_reasons` enumerations, similarity scores, and `highlights` metadata so the UI can map issues back to specific question responses. Each highlight entry carries `question_id`, optional `text_answer_id`, character `start_index`/`end_index`, a sanitized `snippet`, and the `highlight_reason` that triggered it. Multiple highlights can be returned per question when distinct spans are detected.【F:docs/fullstack-architecture.md†L739-L804】
     -   `GET /api/v1/flagged-evaluations`: Paginated admin view of submissions with unresolved flags; supports filtering by flag type and status (`pending_review`, `resubmission_requested`, `archived`, `approved`). | Aligns with FR4 review dashboard.
     -   `POST /api/v1/flagged-evaluations/{id}/resolve`: Admin resolution endpoint accepting `action` (`approve`, `archive`, `request_resubmission`) and optional notes. Auto-enqueues aggregate recalculation job on `approve` (FR4/FR8).
     -   `POST /api/v1/flagged-evaluations/{id}/remind`: Sends anonymous notification to student explaining decision, satisfying FR4.1.
@@ -1324,17 +1380,21 @@ All analytics endpoints enforce PRD requirement to exclude archived or pending-r
 -   `GET /api/v1/jobs`: Tenant-scoped view of background jobs (imports, report generation, period cancellation). Returns status, submitted/started/completed timestamps, and error file locations, mapping directly to the Admin "Import Job History" UI.【F:docs/fullstack-architecture.md†L889-L930】
 -   `GET /api/v1/jobs/{jobUuid}`: Poll the status of a specific job (used after file uploads or aggregate recalculations).
 -   `POST /api/v1/jobs/{jobUuid}/cancel`: Allow Admins to cancel long-running imports when permissible (status `queued` or `processing`).
--   `POST /api/v1/jobs/{jobUuid}/force-fail`: Admin-only endpoint surfaced after a job has remained in `processing` beyond the configured stuck threshold (default 5 minutes) and rate-limited to 2 attempts per admin per job per hour. Requires a confirmation payload (`reason`, `acknowledge_rollback=true`) and records a detailed audit log (job UUID, actor, runtime duration, last heartbeat payload). Upon success, the worker task is terminated, the job status transitions to `failed`, and any dependent entities (e.g., periods in `cancelling` state) are rolled back to their last stable status per PRD Story 2.7. Safety checks verify that no new worker heartbeat has been received within the last 60 seconds before allowing the failover. If rollback verification detects unresolved side effects, the job is moved to `cleanup_failed` and a monitoring hook emits a `job.force_fail.cleanup_failed` metric/alert for SRE follow-up. 【F:docs/prd.md†L304-L332】
+-   `POST /api/v1/jobs/{jobUuid}/retry`: Re-queue a failed report-generation job using its persisted request parameters. When invoked, the system creates a new job record linked back to the original, resets status indicators in listings to `queued`, and surfaces a `retry_parent_uuid` for traceability. The Admin history view collapses retries beneath the source job to avoid clutter while still exposing attempt counts.
+    -   Safeguards: Enforce a configurable maximum retry count (default `3`) tracked per job chain; reject retries if the job failed for permission issues or if the associated report definition has been deleted/disabled since the original attempt.
+    -   Worker expectations: Background workers must treat the retried job as a fresh execution—re-building secure download URLs, re-validating permissions and tenant scoping, and skipping artifact reuse to prevent duplicate or stale report downloads.【F:docs/fullstack-architecture.md†L889-L930】
 
 #### **5.11 AI Assistant & Suggestion History (Domain 11)**
 
 | Method & Path | Description | Notes |
 | :------------ | :---------- | :---- |
-| `POST /api/v1/ai/suggestions/run` | Initiate Gemini-powered suggestion generation for a specified cohort (faculty, department). | Worker pulls job, anonymizes payload per Section 17, and caches result in Redis for 6 hours to control costs (Section 7). |
-| `GET /api/v1/ai/suggestions/run/{runId}` | Fetch the status and output of a generation request. | Returns `pending`, `completed`, `failed` plus generated text when ready. |
-| `POST /api/v1/ai/suggestions/{runId}/save` | Persist a generated suggestion to history with optional user notes/tags. | Creates `ai_suggestions` record linked to run. |
+| `GET /api/v1/ai/filters` | Bootstrap the AI Assistant with the allowable term/period/role filters for the signed-in user. | Aligns to the UI load sequence so the front-end can render controls before any generation action is taken.【F:docs/front-end-spec.md†L191-L212】 |
+| `POST /api/v1/ai/suggestions` | Synchronously generate Gemini-powered suggestions using the currently selected filters and action. | Request body includes a `filters` object (term, period, scope) and an `action` identifier matching the UI buttons; response returns the generated text in the same call so the loading spinner can clear immediately on success.【F:docs/front-end-spec.md†L199-L211】【F:docs/prd.md†L592-L599】 |
+| `POST /api/v1/ai/suggestions/save` | Persist a generated suggestion to history with optional user notes/tags. | Stores the immediate generation response together with its filter/action metadata for Story 6.3 history retrieval.【F:docs/prd.md†L601-L609】 |
 | `GET /api/v1/ai/suggestions/history` | List saved suggestions for Faculty/Department Heads filtered by term, department, faculty. | Powers AI Assistant history tab (front-end spec Section 2). |
 | `DELETE /api/v1/ai/suggestions/{id}` | Soft delete a saved suggestion. | Retains audit trail for compliance. |
+
+`POST /api/v1/ai/suggestions` gathers the processed aggregates mandated in PRD Story 6.2 (`numerical_aggregates`, `sentiment_aggregates`, top sentiment-bearing keywords) before constructing the Persona-Context-Task-Format prompt for Gemini. While the call is in flight the UI disables all action buttons and shows a loading indicator, mirroring the front-end contract and ensuring only one synchronous invocation runs at a time.【F:docs/prd.md†L592-L599】 If Gemini times out or returns an error, the endpoint surfaces an actionable `503 Service Unavailable` (or domain-specific `gemini_unavailable`) payload so the client can present the friendly failure state described in the PRD.【F:docs/prd.md†L597-L599】
 
 #### **5.12 Bulk Imports & File Processing (Domain 12)**
 
@@ -1344,6 +1404,8 @@ All analytics endpoints enforce PRD requirement to exclude archived or pending-r
 -   `GET /api/v1/imports/{batchId}/rows`: Paginated detail of parsed rows with status and diagnostic messages. Supports `filter[status]` and `search` for row-level troubleshooting.
 -   `GET /api/v1/imports/{batchId}/error-report` & `/result-file`: Authenticated download endpoints for worker-produced CSV/zip artifacts.
 -   `POST /api/v1/imports/{batchId}/retry` : Re-queue failed rows after Admin fixes the source file or overrides validation.
+
+These import routes are the mandatory mechanism for V1 admin provisioning of accounts (including administrators) in alignment with FR1; they pair with invitation-code self-registration for smaller cohorts or late additions (Section 5.2).
 
 All import endpoints stream uploads directly to disk, enqueue parsing jobs, and surface validation issues via `import_row_issues`, fulfilling FR9.【F:docs/prd.md†L108-L115】【F:docs/fullstack-architecture.md†L1025-L1114】
 
