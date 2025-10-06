@@ -1,5 +1,3 @@
-Of course. Here is the complete and fully updated `front-end-spec.md` document, incorporating all of our collaborative refinements and approved sections.
-
 ````markdown
 # Proficiency UI/UX Specification
 
@@ -35,6 +33,7 @@ The interface must feel clean, trustworthy, and represent a significant upgrade 
 
 | Date       | Version | Description                                                                                                                                                                                             | Author           |
 | :--------- | :------ | :------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ | :--------------- |
+| 2025-10-06 | 2.1     | Integrated UI/UX for new admin features (Duplicate Period, Proactive Notifications) from PRD v6.3. Added Notification Center to IA and defined NotificationItem component.                              | Sally, UX Expert |
 | 2025-10-02 | 2.0     | Finalized all user flows and completed all design sections (Branding, Accessibility, Responsiveness, Animation). Added alignment notes for PM. Spec is now ready for architectural handoff.             | Sally, UX Expert |
 | 2025-10-01 | 1.7     | **Restored missing flow diagrams and technical notes from previous versions to create a single, complete master specification.**                                                                        | Sally, UX Expert |
 | 2025-10-01 | 1.6     | Finalized and integrated the "Managerial & Administrative Review" user flow with all elicitation refinements. Added tiered dashboard layouts and the hybrid "drill-down" approach for viewing comments. | Sally, UX Expert |
@@ -96,6 +95,7 @@ graph TD
             Adm_Page --> Adm_Tabs{Tabs};
             Adm_Tabs --> Adm_Overview[Overview];
             Adm_Tabs --> Adm_Explore[Explore Data];
+            Adm_Page --> Adm_Notif[Notification Panel];
             Adm_Page --> Adm_Reports[Report Center];
             Adm_Page --> Adm_Forms[Form & Period Management];
             Adm_Page --> Adm_Flags[Flagged Evaluations];
@@ -121,7 +121,6 @@ graph TD
     C -- Admin --> Adm_Page;
     C -- "Super Admin" --> SA_Dash;
 ```
-````
 
 #### **Navigation Structure**
 
@@ -211,13 +210,13 @@ sequenceDiagram
     Frontend->>Frontend: Re-enables buttons
 ```
 
-#### **Flow: Admin - Form & Period Management (Corrected for Alignment)**
+#### **Flow: Admin - Form & Period Management**
 
--   **User Goal:** To create a new evaluation form template through a guided process, define its structure, and assign it to a specific academic period to launch an evaluation, with smart guardrails to ensure correct assignment.
+-   **User Goal:** To create a new evaluation form template, define its structure, and assign it to a specific academic period to launch an evaluation. This includes the ability to efficiently duplicate existing period configurations.
 -   **Entry Points:** The Admin navigates to the "Form & Period Management" page from the sidebar.
 -   **Success Criteria:** A new, active evaluation period is created with a valid form template (or templates) assigned to it, and the form becomes available to the designated evaluators at the specified start time.
 
-**Corrected Flow Diagram:**
+**Flow Diagram:**
 
 ```mermaid
 graph TD
@@ -230,6 +229,7 @@ graph TD
         B --> C[Views Lists of Templates & Scheduled Periods];
         C -- "Clicks 'Assign' on a Template" --> S;
         C -- "Clicks 'Edit' on a Scheduled Period" --> S;
+        C -- "Clicks 'Duplicate' on a Scheduled Period" --> S;
     end
 
     subgraph "Template Creation"
@@ -255,6 +255,24 @@ graph TD
         AA --> C;
         Z -- No --> S;
     end
+```
+
+#### **Flow: Admin - Responding to Proactive Notification**
+
+-   **User Goal:** To see a system-generated notification about a recently concluded evaluation period and use it to quickly begin scheduling the next one.
+-   **Entry Points:** A new notification appears in the Notification Panel on the Admin Dashboard.
+-   **Success Criteria:** The Admin successfully navigates from the notification to the pre-filled "Period Assignment" screen, ready to schedule the next logical period.
+
+**Flow Diagram:**
+
+```mermaid
+flowchart TD
+    A[Start: Admin views Dashboard] --> B[Sees new alert in Notification Panel];
+    B --> C[Clicks notification: "The Midterm period has ended. Would you like to schedule the Finals?"];
+    C --> D[System navigates to 'Period Assignment' screen];
+    D --> E["Form is pre-filled with duplicated<br/>configuration from the previous period"];
+    E --> F[Admin enters new dates and confirms];
+    F --> G[End: New period is scheduled];
 ```
 
 #### **Flow: Historical Data Onboarding**
@@ -679,6 +697,7 @@ The project will adhere to a consistent design system built upon **`shadcn/ui`**
     -   **`FilterBar`:** A component that groups all standard filter dropdowns.
     -   **`ModeSwitcher`:** The control used by Admins and Department Heads to switch their data view context.
     -   **`CommentViewerDialog`**: A dialog component triggered by clicking on a chart segment. It displays anonymized comments and enforces the anonymity threshold by showing a privacy message if the response count is too low.
+    -   **`NotificationItem`**: A reusable component to display a single notification in a list or panel, providing key information (title, message, timestamp) and a clear call-to-action button.
 
 ---
 
@@ -883,7 +902,4 @@ When the frontend receives a `409 Conflict` response, it **must** display a moda
 
 **Applicable User Flows:**
 This global pattern **must** be implemented for all user flows involving the modification of shared resources (Form Management, Flagged Evaluation Review, etc.).
-
-```
-
-```
+````
