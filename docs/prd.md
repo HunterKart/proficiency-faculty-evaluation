@@ -22,6 +22,7 @@ Existing faculty evaluation systems, particularly within the Philippines and at 
 
 | Date       | Version | Description                                                                                                                                    | Author   |
 | :--------- | :------ | :--------------------------------------------------------------------------------------------------------------------------------------------- | :------- |
+| 2025-10-06 | 6.4     | Aligned Story 1.5 with architectural safety measures regarding data file validation during university approval.                                | John, PM |
 | 2025-10-06 | 6.3     | Added "Duplicate Period" (FR13, Story 3.9) and "Proactive Notification" (FR14, Story 3.10) features to improve admin workflow.                 | John, PM |
 | 2025-10-02 | 6.2     | Final version with complete Acceptance Criteria for all new stories, refined through elicitation. PRD is finalized.                            | John, PM |
 | 2025-10-02 | 6.1     | Applied structural changes and new requirements based on alignment with front-end-spec v2.0.                                                   | John, PM |
@@ -215,6 +216,7 @@ The architecture will be a **simple monolith** consisting of a single FastAPI ba
     4.  Upon approval, an email is sent to the `contact_person_email` containing a confirmation message and a unique link to verify their new Admin account and set their password.
     5.  Rejecting a request requires a reason and triggers an email notification to the applicant with the reason for rejection, moving the request to the 'Resolved' stage.
     6.  The login page, when encountering an unverified Admin account, displays an error message and a 'Resend Verification Email' button that re-triggers the confirmation email.
+    7.  The approval process must include a final confirmation step where the Super Admin acknowledges the validation status of any optionally uploaded data files before the approval can be finalized.
 
 **Story 1.6a: Bulk Import Validation & Feedback**
 

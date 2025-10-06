@@ -32,6 +32,7 @@ The interface must feel clean, trustworthy, and represent a significant upgrade 
 
 | Date       | Version | Description                                                                                                                                                                                             | Author           |
 | :--------- | :------ | :------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ | :--------------- |
+| 2025-10-06 | 2.2     | Updated the "Super Admin - University Onboarding" user flow to include a two-step approval process, adding a confirmation modal to display file validation summaries before final action.               | Sally, UX Expert |
 | 2025-10-06 | 2.1     | Integrated UI/UX for new admin features (Duplicate Period, Proactive Notifications) from PRD v6.3. Added Notification Center to IA and defined NotificationItem component.                              | Sally, UX Expert |
 | 2025-10-02 | 2.0     | Finalized all user flows and completed all design sections (Branding, Accessibility, Responsiveness, Animation). Added alignment notes for PM. Spec is now ready for architectural handoff.             | Sally, UX Expert |
 | 2025-10-01 | 1.7     | **Restored missing flow diagrams and technical notes from previous versions to create a single, complete master specification.**                                                                        | Sally, UX Expert |
@@ -377,8 +378,12 @@ flowchart TD
         H -- Reject --> I[Enters reason, confirms];
         I --> J[API rejects request, sends email];
 
-        H -- Approve --> K[Confirms approval];
-        K --> L[Backend Transaction:<br>1. Create university & admin records<br>2. Enqueue optional structure file imports<br>3. Send verification email to new Admin];
+        H -- Approve --> K[API fetches validation summary for uploaded files];
+        K --> K2[Display Confirmation Modal with Validation Summary];
+        K2 --> K3{User confirms final approval};
+
+        K3 -- Yes --> L[Backend Transaction:<br>1. Create university & admin records<br>2. Enqueue optional structure file imports<br>3. Send verification email to new Admin];
+        K3 -- No --> D;
     end
 
     L --> M[Card moves to 'Resolved' column];
@@ -390,6 +395,7 @@ flowchart TD
 
 -   **Security & Privacy:** The flow is designed to prevent Super Admins from accessing sensitive university PII. They only see a validation summary for the optional academic structure files, not the contents.
 -   **UI/UX:** A Kanban board provides an intuitive visual for managing the queue. A locking mechanism prevents concurrent reviews. An accessible audit trail ensures accountability.
+-   **Confirmation Modal UI Specification:** When a Super Admin approves a request with uploaded files, a final confirmation modal (`shadcn/ui` `<AlertDialog>`) must appear. It must have the title "Confirm University Approval," display a summary of the file validation status (e.g., `"departments.csv: Valid"`, `"subjects.csv: 2 Errors Found"`), and contain a final confirmation button labeled "Approve and Ingest Data."
 -   **Automation:** Upon approval, the backend automatically enqueues the pre-validated structural data for import, streamlining setup for the new University Admin and creating a positive first impression.
 -   **Recovery:** The Super Admin UI will have a mechanism to resend the verification email to a new Admin in case of initial email delivery failure.
 
