@@ -28,23 +28,24 @@ The interface must feel clean, trustworthy, and represent a significant upgrade 
     4.  **Enforced Consistency:** Programmatically enforce a consistent visual language, component library, and interaction patterns (like sidebar navigation and card-based layouts) throughout the application to ensure a predictable user experience.
         -   **_Developer Note:_** _Consistency will be enforced. All styling will use Tailwind CSS utility classes. All core UI elements (buttons, forms, cards) will be derived from 'shadcn/ui' primitives. The **Monorepo** structure should be leveraged to create a shared UI package for any custom-built, reusable components._
 
-#### **Change Log**
+#### **Changelog**
 
-| Date       | Version | Description                                                                                                                                                                                             | Author           |
-| :--------- | :------ | :------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ | :--------------- |
-| 2025-10-07 | 2.4     | Added flow for handling deletion of in-use resources. Updated Emergency Cancellation flow with a "Cancelled (Restorable)" state and added a new flow for the restore action.                            | Sally, UX Expert |
-| 2025-10-07 | 2.3     | Added concurrency error handling (409 Conflict) to the Super Admin University Onboarding flow as per architect's request.                                                                               | Sally, UX Expert |
-| 2025-10-06 | 2.2     | Updated the "Super Admin - University Onboarding" user flow to include a two-step approval process, adding a confirmation modal to display file validation summaries before final action.               | Sally, UX Expert |
-| 2025-10-06 | 2.1     | Integrated UI/UX for new admin features (Duplicate Period, Proactive Notifications) from PRD v6.3. Added Notification Center to IA and defined NotificationItem component.                              | Sally, UX Expert |
-| 2025-10-02 | 2.0     | Finalized all user flows and completed all design sections (Branding, Accessibility, Responsiveness, Animation). Added alignment notes for PM. Spec is now ready for architectural handoff.             | Sally, UX Expert |
-| 2025-10-01 | 1.7     | **Restored missing flow diagrams and technical notes from previous versions to create a single, complete master specification.**                                                                        | Sally, UX Expert |
-| 2025-10-01 | 1.6     | Finalized and integrated the "Managerial & Administrative Review" user flow with all elicitation refinements. Added tiered dashboard layouts and the hybrid "drill-down" approach for viewing comments. | Sally, UX Expert |
-| 2025-10-01 | 1.5     | Consolidated and restored all missing flow diagrams and technical notes from previous versions to create a complete, unified specification.                                                             | Sally, UX Expert |
-| 2025-10-01 | 1.4     | Finalized all user flows and integrated elicitation refinements.                                                                                                                                        | Sally, UX Expert |
-| 2025-09-30 | 1.3     | Added refined Admin and Super Admin user flows.                                                                                                                                                         | Sally, UX Expert |
-| 2025-09-30 | 1.2     | Refined Sections 1 & 2 to align with new PRD.                                                                                                                                                           | Sally, UX Expert |
-| 2025-09-28 | 1.1     | Expanded introduction with developer-focused notes.                                                                                                                                                     | Sally, UX Expert |
-| 2025-09-28 | 1.0     | Initial draft of the UI/UX Specification.                                                                                                                                                               | Sally, UX Expert |
+| Date       | Version | Description                                                                                                                                                                                                  | Author           |
+| :--------- | :------ | :----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | :--------------- |
+| 2025-10-07 | 2.5     | Refined **Admin - Background Job Monitoring** flow to distinguish between success and partial failure statuses. Added new metadata display for import job details (Total Rows, Rows Processed, Rows Failed). | Sally, UX Expert |
+| 2025-10-07 | 2.4     | Added flow for handling deletion of in-use resources. Updated Emergency Cancellation flow with a "Cancelled (Restorable)" state and added a new flow for the restore action.                                 | Sally, UX Expert |
+| 2025-10-07 | 2.3     | Added concurrency error handling (409 Conflict) to the Super Admin University Onboarding flow as per architect's request.                                                                                    | Sally, UX Expert |
+| 2025-10-06 | 2.2     | Updated the "Super Admin - University Onboarding" user flow to include a two-step approval process, adding a confirmation modal to display file validation summaries before final action.                    | Sally, UX Expert |
+| 2025-10-06 | 2.1     | Integrated UI/UX for new admin features (Duplicate Period, Proactive Notifications) from PRD v6.3. Added Notification Center to IA and defined NotificationItem component.                                   | Sally, UX Expert |
+| 2025-10-02 | 2.0     | Finalized all user flows and completed all design sections (Branding, Accessibility, Responsiveness, Animation). Added alignment notes for PM. Spec is now ready for architectural handoff.                  | Sally, UX Expert |
+| 2025-10-01 | 1.7     | **Restored missing flow diagrams and technical notes from previous versions to create a single, complete master specification.**                                                                             | Sally, UX Expert |
+| 2025-10-01 | 1.6     | Finalized and integrated the "Managerial & Administrative Review" user flow with all elicitation refinements. Added tiered dashboard layouts and the hybrid "drill-down" approach for viewing comments.      | Sally, UX Expert |
+| 2025-10-01 | 1.5     | Consolidated and restored all missing flow diagrams and technical notes from previous versions to create a complete, unified specification.                                                                  | Sally, UX Expert |
+| 2025-10-01 | 1.4     | Finalized all user flows and integrated elicitation refinements.                                                                                                                                             | Sally, UX Expert |
+| 2025-09-30 | 1.3     | Added refined Admin and Super Admin user flows.                                                                                                                                                              | Sally, UX Expert |
+| 2025-09-30 | 1.2     | Refined Sections 1 & 2 to align with new PRD.                                                                                                                                                                | Sally, UX Expert |
+| 2025-09-28 | 1.1     | Expanded introduction with developer-focused notes.                                                                                                                                                          | Sally, UX Expert |
+| 2025-09-28 | 1.0     | Initial draft of the UI/UX Specification.                                                                                                                                                                    | Sally, UX Expert |
 
 ---
 
@@ -661,17 +662,18 @@ flowchart TD
 ```mermaid
 flowchart TD
     A[Start: Admin navigates to 'Job Monitor'] --> B[Display page with list of all background jobs];
-    B --> C["Table shows: Job Type, Status,<br/>Submitted At, Details link"];
+    B --> C["Table shows: Job Type, Status Icon,<br/>Submitted At, Details link"];
 
     subgraph Job Lifecycle
         D["Status: Queued"] --> E["Status: Processing"];
         E --> F{"Job completes?"};
-        F -- Yes --> G["Status: Completed"];
-        F -- No --> H["Status: Failed (after max retries)"];
+        F -- "Success" --> G["Status: Completed-Success"];
+        F -- "Partial Failure" --> G_Partial["Status: Completed-Partial-Failure"];
+        F -- "Total Failure" --> H["Status: Failed (after max retries)"];
     end
 
-    C --> I{Admin clicks 'Details' on a 'Failed' job};
-    I --> J[Open Dialog: Show detailed error log<br/>and 'Download Error Report' button];
+    C --> I{Admin clicks 'Details' on a job row};
+    I --> J[Open Dialog: Show detailed job metadata<br/>and 'Download Error Report' button if applicable];
 
     C --> K{Admin identifies a job stuck in 'Processing'<br/>or a retry loop};
     K --> L[Clicks 'Force Fail' action button for that job];
@@ -684,6 +686,14 @@ flowchart TD
 **Technical & Developer Notes:**
 
 -   **Centralized Monitor:** This page replaces the "Import Job History" page and must be the single source of truth for monitoring all `RQ` jobs.
+-   **Visual Status Indicators:** The "Status" column in the main table must use clear visual icons to differentiate states:
+    -   `Completed-Success`: A green checkmark icon.
+    -   `Completed-Partial-Failure`: A yellow warning/caution icon.
+    -   `Failed`: A red error/cross icon.
+-   **Granular Job Details:** When an Admin clicks 'Details' on an import job, the dialog must display the following metadata for immediate insight:
+    -   "Total Rows"
+    -   "Rows Processed"
+    -   "Rows Failed"
 -   **Backend Requirements:** The backend must expose job statuses and provide an endpoint for the "Force Fail" action. All critical background jobs must have a `max_retries` limit and a timeout to prevent infinite loops.
 
 #### **Flow: Admin - Handling In-Use Resources**
