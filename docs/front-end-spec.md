@@ -653,48 +653,53 @@ flowchart TD
 
 #### **Flow: Admin - Background Job Monitoring**
 
--   **User Goal:** To monitor the status of all critical background jobs (imports, cancellations, report generation), diagnose failures, and have the ability to manually intervene if a job becomes stuck.
+-   **User Goal:** To monitor the status of all critical background jobs (imports, cancellations, report generation), diagnose failures, and have the ability to gracefully cancel a running job or manually intervene if a job becomes stuck.
 -   **Entry Points:** The Admin clicks on a newly named "Job Monitor" link in the main sidebar navigation.
--   **Success Criteria:** An Admin can view the real-time status of a background job. If a job fails or gets stuck, the Admin can access an error report and use a "Force Fail" action to resolve the deadlock, allowing them to proceed with corrective actions.
+-   **Success Criteria:** An Admin can view the real-time status and progress of a background job. If a job fails, the Admin can immediately download an error report. If a job is taking too long, the Admin can request cancellation and see the system respond to the request.
 
 **Flow Diagram:**
 
 ```mermaid
 flowchart TD
-    A[Start: Admin navigates to 'Job Monitor'] --> B[Display page with list of all background jobs];
-    B --> C["Table shows: Job Type, Status Icon,<br/>Submitted At, Details link"];
+    A[Start: Admin navigates to 'Job Monitor'] --> B["UI establishes WebSocket connection<br/>and displays list of background jobs"];
+    B --> C["Table shows: Job Type, Status Icon,<br/>Progress Bar, Submitted At, Actions"];
 
-    subgraph Job Lifecycle
-        D["Status: Queued"] --> E["Status: Processing"];
-        E --> F{"Job completes?"};
-        F -- "Success" --> G["Status: Completed-Success"];
-        F -- "Partial Failure" --> G_Partial["Status: Completed-Partial-Failure"];
-        F -- "Total Failure" --> H["Status: Failed (after max retries)"];
+    subgraph "Real-time Updates via WebSocket"
+        WebSocket["WebSocket Server"] -- "Pushes status & progress" --> B;
     end
 
-    C --> I{Admin clicks 'Details' on a job row};
-    I --> J[Open Dialog: Show detailed job metadata<br/>and 'Download Error Report' button if applicable];
+    subgraph "Job Lifecycle & Actions"
+        C -- "Job is 'Processing'" --> D{Admin sees 'Request Cancellation' button};
+        D --> E[Clicks 'Request Cancellation'];
+        E --> F[API Call: Request graceful shutdown];
+        F --> G["UI shows status: 'Cancellation Requested'"];
+        G --> H["Job finishes current batch & stops"];
+        H --> I["Status updates to: 'Failed'"];
 
-    C --> K{Admin identifies a job stuck in 'Processing'<br/>or a retry loop};
-    K --> L[Clicks 'Force Fail' action button for that job];
-    L --> M[Open Confirmation Dialog:<br/>'This will stop the job and may require<br/>manual cleanup. Are you sure?'];
-    M -- Yes --> N[API Call: Force job to 'Failed' state];
-    N --> O["Job status updates in UI, unlocks any<br/>related system resources (e.g., the period)"];
-    O --> P[End];
+        C -- "Job is 'Failed' or 'Completed-Partial-Failure'" --> J{Admin sees 'Download Error Report' button};
+        J --> K[Clicks to download report];
+
+        C -- "Job is 'Processing' and stuck" --> L{Admin sees 'Force Fail' button<br/>after a timeout};
+        L --> M[Clicks 'Force Fail' --> Confirms];
+        M --> N[API Call: Force job to 'Failed' state];
+        N --> I;
+    end
+
+    I --> Z[End];
+    K --> Z;
 ```
 
 **Technical & Developer Notes:**
 
+-   **Real-time Progress:** The UI **must** use a WebSocket connection to receive real-time progress updates (e.g., `progress`, `rows_processed`) and status changes for all active jobs. This replaces the previous polling mechanism. A progress bar in the table should reflect this data.
+-   **Cooperative Cancellation:** For jobs in a `processing` state, a "Request Cancellation" button will be available. This action sends a signal for the job to stop gracefully after its current task. The UI **must** display a transitional `cancellation_requested` status while waiting for the job to confirm stoppage.
+-   **Streamlined Error Reporting:** For any job with a status of `failed` or `completed_partial_failure`, the main job list will now display a direct "Download Error Report" button, making the error details immediately accessible without needing to open a details dialog.
 -   **Centralized Monitor:** This page replaces the "Import Job History" page and must be the single source of truth for monitoring all `RQ` jobs.
 -   **Visual Status Indicators:** The "Status" column in the main table must use clear visual icons to differentiate states:
     -   `Completed-Success`: A green checkmark icon.
     -   `Completed-Partial-Failure`: A yellow warning/caution icon.
     -   `Failed`: A red error/cross icon.
--   **Granular Job Details:** When an Admin clicks 'Details' on an import job, the dialog must display the following metadata for immediate insight:
-    -   "Total Rows"
-    -   "Rows Processed"
-    -   "Rows Failed"
--   **Backend Requirements:** The backend must expose job statuses and provide an endpoint for the "Force Fail" action. All critical background jobs must have a `max_retries` limit and a timeout to prevent infinite loops.
+-   **Backend Requirements:** The backend must support WebSocket connections for job updates. It must also expose endpoints for "Request Cancellation" and "Force Fail" actions. All critical background jobs must listen for a cancellation signal to allow for a graceful shutdown.
 
 #### **Flow: Admin - Handling In-Use Resources**
 
