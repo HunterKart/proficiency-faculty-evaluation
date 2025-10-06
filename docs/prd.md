@@ -1,5 +1,3 @@
-Of course. Here is the final and complete Product Requirements Document, **Version 6.2**, with all approved updates, refinements, and acceptance criteria integrated.
-
 ```markdown
 # Proficiency Product Requirements Document (PRD)
 
@@ -25,6 +23,7 @@ Existing faculty evaluation systems, particularly within the Philippines and at 
 
 | Date       | Version | Description                                                                                                                                    | Author   |
 | :--------- | :------ | :--------------------------------------------------------------------------------------------------------------------------------------------- | :------- |
+| 2025-10-06 | 6.3     | Added "Duplicate Period" (FR13, Story 3.9) and "Proactive Notification" (FR14, Story 3.10) features to improve admin workflow.                 | John, PM |
 | 2025-10-02 | 6.2     | Final version with complete Acceptance Criteria for all new stories, refined through elicitation. PRD is finalized.                            | John, PM |
 | 2025-10-02 | 6.1     | Applied structural changes and new requirements based on alignment with front-end-spec v2.0.                                                   | John, PM |
 | 2025-10-02 | 6.0     | Final PRD incorporating all refinements from the completed elicitation process. PRD is now locked and ready for architecture.                  | John, PM |
@@ -82,6 +81,8 @@ Existing faculty evaluation systems, particularly within the Philippines and at 
 -   **FR10: Registration Code Management**: Admins shall be able to set, view, and update the maximum usage limit for their university's self-registration code.
 -   **FR11: Role-Based Registration Codes**: The system must support the generation of distinct self-registration codes for different user roles. The registration process must validate that the user's selected role matches the intended role of the code provided.
 -   **FR12: Resubmission Grace Period**: A "resubmission grace period" of 48 hours shall be granted to a student for a flagged evaluation, allowing them to resubmit their work even if the parent evaluation period is no longer active.
+-   **FR13: Duplicate Evaluation Period Assignment**: Admins shall have the ability to duplicate an existing evaluation period assignment to pre-fill the creation form with the same form template configuration, requiring only new scheduling details to be entered.
+-   **FR14: Proactive Period Setup Notification**: The system shall generate a notification for Admins when an evaluation period concludes, prompting them to schedule the next logical period and providing a one-click action to begin the duplication process.
 
 #### **Non-Functional Requirements**
 
@@ -424,6 +425,26 @@ _UX Note: To improve the first-time user experience, the "Evaluation Management"
     8.  If the job fails for any reason after it has started processing, it must be moved to RQ's 'failed' queue, and the period's status must remain 'Cancelling...' to signal that a manual review is required.
     9.  The entire cancellation job must be designed to be idempotent. If the job is interrupted and retried, it must be able to resume from the start and still produce the correct final state without duplicating actions or causing errors.
 
+**Story 3.9: Duplicate an Existing Period Assignment**
+
+-   **As an** Admin, **I want** to duplicate an existing evaluation period assignment, **so that** I can quickly schedule a new period using the same form configuration.
+-   **Acceptance Criteria:**
+    1.  An action to "Duplicate" is available for every entry in the list of Evaluation Periods.
+    2.  Activating the "Duplicate" action navigates the user to the "Create Period Assignment" screen.
+    3.  The form template selections (for both Students and Department Heads) are pre-populated with the values from the source period.
+    4.  All date and time fields (`start_date_time`, `end_date_time`) are empty and must be filled by the user.
+    5.  Saving the form successfully creates a new, independent `evaluation_periods` record in the database.
+    6.  The original evaluation period that was duplicated remains completely unchanged.
+
+**Story 3.10: Proactive Period Setup Notification**
+
+-   **As an** Admin, **I want** to be notified when an evaluation period ends and be prompted to set up the next one, **so that** I don't forget and can efficiently roll over the configuration.
+-   **Acceptance Criteria:**
+    1.  Within 24 hours of an evaluation period's `end_date_time` passing, a notification is created for all Admins of that university.
+    2.  The notification clearly states which period has ended and suggests the next logical period to set up (e.g., Midterm -> Finals).
+    3.  The notification contains an action that takes the Admin directly to the pre-filled "Duplicate Period" creation screen.
+    4.  The system correctly determines the next logical academic period based on the university's calendar structure.
+
 #### **Epic 4: The Core Evaluation & Data Integrity Loop**
 
 **Story 4.1: Evaluation Submission**
@@ -623,7 +644,7 @@ _UX Note: To improve the first-time user experience, the "Evaluation Management"
 
 ### **Next Steps**
 
-This document (Version 6.2) provides the complete and aligned requirements for the "Proficiency" application.
+This document (Version 6.3) provides the complete and aligned requirements for the "Proficiency" application.
 
 -   **For the Architect (`*agent architect`):** Please use this PRD as the primary input to create the `fullstack-architecture.md` document.
 
