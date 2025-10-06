@@ -266,6 +266,8 @@ This section defines the complete relational data schema for the application. Th
     -   `status`: The user's account status (`active`, `inactive`, `unverified`).
     -   **`program_id`**: **(New)** A nullable foreign key to `Program`, to be used for users with the 'Student' role.
     -   `registration_code_id`: A nullable foreign key to `RegistrationCode`.
+    -   `tokenVersion`: An integer, defaulting to 1, that is incremented upon password change or "log out all sessions" action to invalidate old JWTs.
+    -   `created_at` / `updated_at`: Timestamps for record management.
 -   **TypeScript Interface**:
     ```typescript
     interface User {
@@ -278,6 +280,7 @@ This section defines the complete relational data schema for the application. Th
         status: "active" | "inactive" | "unverified";
         programId?: number; // Primarily for students
         registrationCodeId?: number;
+        tokenVersion: number; // This version number must be included as a claim in the JWT.
         createdAt: Date;
         updatedAt: Date;
     }
@@ -298,12 +301,15 @@ This section defines the complete relational data schema for the application. Th
     -   `password_hash`: The securely hashed password.
     -   `pin_hash`: A securely hashed 6-digit PIN for multi-factor authentication.
     -   `status`: The account's status (e.g., `active`, `locked`).
+    -   `tokenVersion`: An integer, defaulting to 1, that is incremented upon password change or "log out all sessions" action to invalidate old JWTs.
+    -   `created_at`: Timestamp for when the super admin was created.
 -   **TypeScript Interface**:
     ```typescript
     interface SuperAdmin {
         id: number;
         email: string;
         status: "active" | "locked";
+        tokenVersion: number; // This version number must be included as a claim in the JWT.
         createdAt: Date;
     }
     ```
