@@ -1,4 +1,3 @@
-````markdown
 # Proficiency UI/UX Specification
 
 ### **Section 1: Introduction**
@@ -151,11 +150,11 @@ graph TD
     A[Start: Student on Dashboard] --> B(Selects Faculty to Evaluate);
     B --> C[System Loads Correct Evaluation Form];
     C --> D[User Fills Out Likert Scores & Open-Ended Answers];
-    D --> E{User Clicks "Submit"};
+    D --> E{"User Clicks &quot;Submit&quot;"};
     E --> F{Time on Form > Minimum?};
-    F -- No --> G[Show Error: "Please take more time to review"];
+    F -- No --> G[Show Error: &quot;Please take more time to review&quot;];
     G --> D;
-    F -- Yes --> H{All Required Fields Valid? (e.g., word count)};
+    F -- Yes --> H{"All Required Fields Valid? (e.g., word count)"};
     H -- No --> I[Show Field-Specific Error];
     I --> D;
     H -- Yes --> J{Low-Variance Likert Scores?};
@@ -236,10 +235,10 @@ graph TD
         D1 --> E[Step 1: Metadata...];
         E --> F[Step 2: Criteria & Weights];
         F --> G[Step 3: Add/Manage Questions];
-        G --> H[Clicks "Save Draft"];
+        G --> H["Clicks &quot;Save Draft&quot;"];
         H --> C;
-        G --> I[Clicks "Preview & Finalize"];
-        I --> L[Clicks "Finalize Template"];
+        G --> I["Clicks &quot;Preview & Finalize&quot;"];
+        I --> L["Clicks &quot;Finalize Template&quot;"];
         L --> P[Template status becomes 'active'];
         P --> C;
     end
@@ -268,7 +267,7 @@ graph TD
 ```mermaid
 flowchart TD
     A[Start: Admin views Dashboard] --> B[Sees new alert in Notification Panel];
-    B --> C[Clicks notification: "The Midterm period has ended. Would you like to schedule the Finals?"];
+    B --> C["Clicks notification: &quot;The Midterm period has ended. Would you like to schedule the Finals?&quot;"];
     C --> D[System navigates to 'Period Assignment' screen];
     D --> E["Form is pre-filled with duplicated<br/>configuration from the previous period"];
     E --> F[Admin enters new dates and confirms];
@@ -315,14 +314,14 @@ flowchart TD
 
 ```mermaid
 flowchart TD
-    A[Start: Admin navigates to<br/>'Flagged Evaluations' page] --> B[Display page with two tabs:<br/><b>'Pending' (Default)</b> & 'Resolved'];
+    A[Start: Admin navigates to<br/>'Flagged Evaluations' page] --> B["Display page with two tabs:<br/><b>'Pending' (Default)</b> & 'Resolved'"];
     B --> C[API fetches and displays<br/>a table of pending flagged evaluations];
     C --> C1(Optional: Admin clicks 'Start Focus Review'<br>to enter one-at-a-time mode);
     C --> D{Admin clicks on a specific<br/>evaluation row to review};
 
     D --> E[Open Dialog/Sheet with Review Interface];
     E --> F[Display side-by-side comparison<br><b>Dynamically highlight</b> data that triggered flag];
-    F --> G[Display flag reason(s) clearly:<br/><i>e.g., 'Low-Confidence'</i>];
+    F --> G["Display flag reason(s) clearly:<br/><i>e.g., 'Low-Confidence'</i>"];
 
     G --> H{Admin chooses an action};
     H -- "Approve" --> I[Confirm Action: 'Approve Submission?'];
@@ -333,7 +332,7 @@ flowchart TD
 
     J --> J1[<b>Default:</b> Required free-text for reason<br><b>Optional:</b> Click to use checklist of pre-defined reasons];
     J1 --> J2{Admin confirms};
-    J2 -- Yes --> M[API Call: Resolve flag as 'Archived'<br>Soft-delete submission (recoverable for 30 days)<br>Trigger anonymous notification with reason];
+    J2 -- Yes --> M["API Call: Resolve flag as 'Archived'<br>Soft-delete submission (recoverable for 30 days)<br>Trigger anonymous notification with reason"];
 
     K --> K1[<b>Default:</b> Required free-text for reason<br><b>Optional:</b> Click to use checklist of pre-defined reasons];
     K1 --> K2{Admin confirms};
@@ -368,10 +367,10 @@ flowchart TD
     end
 
     subgraph SuperAdmin [Super Admin]
-        B[Dashboard shows Kanban board:<br>New | In Review | Resolved] --> C{Drags request card to 'In Review'<br><i>(Locks request)</i>};
+        B["Dashboard shows Kanban board:<br>New | In Review | Resolved"] --> C{"Drags request card to 'In Review'<br><i>(Locks request)</i>"};
         C --> D[Clicks card to open detail view];
         D --> E[Reviews institutional data & documents];
-        E --> F[Sees validation summary for<br>optional structure files, if any<br><i>(Cannot view file contents)</i>];
+        E --> F["Sees validation summary for<br>optional structure files, if any<br><i>(Cannot view file contents)</i>"];
         F --> G[Clicks 'View History' to see audit trail];
         G --> H{Chooses 'Approve' or 'Reject'};
 
@@ -410,8 +409,8 @@ flowchart TD
     B_Tabs --> C2["My Reports (Inbox)"];
 
     C --> D{User selects a pre-defined report type<br>e.g., 'Faculty Performance Summary'};
-    D --> E[Display relevant filters for that report<br><i>(e.g., School Term, Assessment Period, Department)</i>];
-    E --> G[User selects export format<br>(PDF or CSV/Excel)];
+    D --> E["Display relevant filters for that report<br><i>(e.g., School Term, Assessment Period, Department)</i>"];
+    E --> G["User selects export format<br>(PDF or CSV/Excel)"];
     G --> H{User clicks 'Generate Report'};
 
     subgraph HybridLogic [Smart Hybrid Logic]
@@ -451,8 +450,8 @@ flowchart TD
 ```mermaid
 graph TD
     A[Start: User on Dashboard Overview] --> B[Clicks 'Explore Data' Tab];
-    B --> C[View defaults to highest-level<br/><i>(Dept. for Head, University for Admin)</i>];
-    C --> D[User applies filters<br/><i>(e.g., Term, Subject)</i>];
+    B --> C["View defaults to highest-level<br/><i>(Dept. for Head, University for Admin)</i>"];
+    C --> D["User applies filters<br/><i>(e.g., Term, Subject)</i>"];
     D --> E[Analyzes aggregated charts & data];
     E --> F{Identifies a person/group to investigate};
     F --> G[Uses 'Switch View/Mode' control];
@@ -479,7 +478,7 @@ flowchart TD
     B --> C["A prominent banner displays the anonymous,<br/>constructive reason for the rejection"];
     C --> D["The specific text that triggered the flag<br/>is visually highlighted in the form below"];
 
-    D --> E[The form fields are pre-filled with the<br/>student's original (rejected) answers];
+    D --> E["The form fields are pre-filled with the<br/>student's original (rejected) answers"];
     E --> E_opt["(Optional) User clicks 'Clear Form & Start Over'"];
     E_opt --> E_clear[Form fields are cleared];
     E_clear --> F;
@@ -546,7 +545,7 @@ flowchart TD
     J -- Yes --> L[API Call: Submit full registration details];
     L --> M{Backend: Final validation<br/><b>Does selected role match code's intended role?</b>};
 
-    M -- "Role Mismatch" --> N_Role[Display form error:<br/>'This code is for a [intended role].<br/>Please select the correct role.'];
+    M -- "Role Mismatch" --> N_Role["Display form error:<br/>'This code is for a [intended role].<br/>Please select the correct role.'"];
     M -- "Other Failure (e.g., email exists)" --> N[Display form error];
     N_Role --> H;
     N --> H;
@@ -656,7 +655,7 @@ flowchart TD
     K --> L[Clicks 'Force Fail' action button for that job];
     L --> M[Open Confirmation Dialog:<br/>'This will stop the job and may require<br/>manual cleanup. Are you sure?'];
     M -- Yes --> N[API Call: Force job to 'Failed' state];
-    N --> O[Job status updates in UI, unlocks any<br/>related system resources (e.g., the period)];
+    N --> O["Job status updates in UI, unlocks any<br/>related system resources (e.g., the period)"];
     O --> P[End];
 ```
 
@@ -902,4 +901,3 @@ When the frontend receives a `409 Conflict` response, it **must** display a moda
 
 **Applicable User Flows:**
 This global pattern **must** be implemented for all user flows involving the modification of shared resources (Form Management, Flagged Evaluation Review, etc.).
-````

@@ -1,4 +1,3 @@
-````markdown
 # **Proficiency Fullstack Architecture Document**
 
 ## **Introduction**
@@ -45,7 +44,7 @@ The **Proficiency** platform will be architected as a modern, decoupled web appl
 
 ```mermaid
 graph LR
-    subgraph "User"
+    subgraph user_grp["User"]
         User([User's Browser]);
     end
 
@@ -55,12 +54,12 @@ graph LR
         Worker(RQ Worker);
         Redis(Redis);
         DB[(MySQL / MariaDB)];
-        Storage([File Storage <br><i>(Volume Mount)</i>]);
+        Storage(["File Storage <br><i>(Volume Mount)</i>"]);
 
         subgraph "Worker Responsibilities"
             direction TB
-            W_Task1[Local AI Inference <br><i>(Sentiment/Keywords)</i>];
-            W_Task2[External API Calls <br><i>(Gemini/SMTP)</i>];
+            W_Task1["Local AI Inference <br><i>(Sentiment/Keywords)</i>"];
+            W_Task2["External API Calls <br><i>(Gemini/SMTP)</i>"];
             W_Task3[Data Imports / Reports];
         end
     end
@@ -1206,4 +1205,3 @@ This section defines the complete relational data schema for the application. Th
     -   Optionally belongs to one `University`.
     -   Belongs to one recipient (`User` or `SuperAdmin`).
     -   Optionally triggered by one actor (`User`, `SuperAdmin`, or `System`).
-````
