@@ -1,4 +1,3 @@
-```markdown
 # Proficiency Product Requirements Document (PRD)
 
 ---
@@ -649,4 +648,3 @@ This document (Version 6.3) provides the complete and aligned requirements for t
 -   **For the Architect (`*agent architect`):** Please use this PRD as the primary input to create the `fullstack-architecture.md` document.
 
 -   **For the Product Owner (`*agent po`):** Please use the `po-master-checklist` to perform a final validation of this document for completeness and consistency before the Architect begins their work.
-```
