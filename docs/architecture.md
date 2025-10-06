@@ -1094,13 +1094,16 @@ This section defines the complete relational data schema for the application. Th
     -   `id`: Primary key.
     -   `university_id`: Foreign key for multi-tenancy.
     -   **`job_type`**: **(Expanded)** An identifier for the type of job.
-    -   `status`: The job's lifecycle status (`queued`, `processing`, `completed`, `failed`, `cancelled`).
+    -   `status`: The job's lifecycle status (`queued`, `processing`, `completed_success`, `completed_partial_failure`, `failed`, `cancelled`).
     -   `submitted_by_user_id`: Foreign key to the `User` who initiated the job.
     -   `job_parameters`: A JSON field to store the input parameters for the job.
     -   `progress`: An integer from 0-100 to show the progress of long-running tasks.
     -   `result_message`: A text field for a summary of the success or error outcome.
     -   `result_storage_path`: A nullable path to any output file, such as an error report.
     -   `created_at` / `started_at` / `completed_at`: Timestamps to track the job's lifecycle.
+    -   `rows_total`: A nullable integer for the total number of data rows in an imported file.
+    -   `rows_processed`: A nullable integer for the number of rows successfully imported.
+    -   `rows_failed`: A nullable integer for the number of rows that failed during import.
 -   **TypeScript Interface**:
     ```typescript
     interface BackgroundTask {
@@ -1117,7 +1120,13 @@ This section defines the complete relational data schema for the application. Th
             | "QUANTITATIVE_ANALYSIS"
             | "QUALITATIVE_ANALYSIS"
             | "FINAL_AGGREGATION";
-        status: "queued" | "processing" | "completed" | "failed" | "cancelled";
+        status:
+            | "queued"
+            | "processing"
+            | "completed_success"
+            | "completed_partial_failure"
+            | "failed"
+            | "cancelled";
         submittedByUserId: number;
         jobParameters: Record<string, any>;
         progress: number;
@@ -1126,6 +1135,10 @@ This section defines the complete relational data schema for the application. Th
         createdAt: Date;
         startedAt?: Date;
         completedAt?: Date;
+        // New optional fields for import job metadata
+        rowsTotal?: number;
+        rowsProcessed?: number;
+        rowsFailed?: number;
     }
     ```
 -   **Relationships**:

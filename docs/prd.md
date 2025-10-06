@@ -22,6 +22,7 @@ Existing faculty evaluation systems, particularly within the Philippines and at 
 
 | Date       | Version | Description                                                                                                                                    | Author   |
 | :--------- | :------ | :--------------------------------------------------------------------------------------------------------------------------------------------- | :------- |
+| 2025-10-07 | 6.5     | Added FR15 to prevent deletion of in-use resources. Refactored Period Cancellation (Story 3.6, 3.8) to a 72-hour restorable soft cancellation. | John, PM |
 | 2025-10-06 | 6.4     | Aligned Story 1.5 with architectural safety measures regarding data file validation during university approval.                                | John, PM |
 | 2025-10-06 | 6.3     | Added "Duplicate Period" (FR13, Story 3.9) and "Proactive Notification" (FR14, Story 3.10) features to improve admin workflow.                 | John, PM |
 | 2025-10-02 | 6.2     | Final version with complete Acceptance Criteria for all new stories, refined through elicitation. PRD is finalized.                            | John, PM |
@@ -83,6 +84,7 @@ Existing faculty evaluation systems, particularly within the Philippines and at 
 -   **FR12: Resubmission Grace Period**: A "resubmission grace period" of 48 hours shall be granted to a student for a flagged evaluation, allowing them to resubmit their work even if the parent evaluation period is no longer active.
 -   **FR13: Duplicate Evaluation Period Assignment**: Admins shall have the ability to duplicate an existing evaluation period assignment to pre-fill the creation form with the same form template configuration, requiring only new scheduling details to be entered.
 -   **FR14: Proactive Period Setup Notification**: The system shall generate a notification for Admins when an evaluation period concludes, prompting them to schedule the next logical period and providing a one-click action to begin the duplication process.
+-   **FR15: In-Use Resource Protection**: The system must prevent the archival or deletion of any resource (e.g., Form Template) that is currently assigned to an active or scheduled Evaluation Period. An attempt to do so must result in a clear error message explaining the dependency.
 
 #### **Non-Functional Requirements**
 
@@ -379,18 +381,19 @@ _UX Note: To improve the first-time user experience, the "Evaluation Management"
     9.  Any "Delete" action on a planned period must trigger a confirmation dialog.
     10. Upon successful assignment, the status of the selected form template(s) is updated to 'assigned'.
 
-**Story 3.6: Frontend - Initiate Period Cancellation**
+**Story 3.6: Frontend - Initiate Soft Period Cancellation & Restoration**
 
--   **As an** Admin, **I want** to initiate an emergency period cancellation from the UI by selecting a pre-defined reason and confirming the action, **so that** I can safely correct a critical error.
+-   **As an** Admin, **I want** to initiate a "soft" period cancellation that is restorable for 72 hours, **so that** I can safely correct a critical error with a clear window for reversal.
 -   **Acceptance Criteria:**
     1.  A 'Cancel Period' action button is visible and enabled on the "Form & Period Management" page for any evaluation period that has an 'Active' status.
     2.  Clicking the 'Cancel Period' action must open a confirmation dialog designed for destructive actions.
     3.  The dialog must require the Admin to select a reason from a pre-defined dropdown list. If the 'Other (requires internal note)' option is selected, a text area for internal notes must become visible and mandatory.
     4.  The final 'Confirm Cancellation' button in the dialog must remain disabled until the Admin types the exact word 'CANCEL' into a confirmation text field.
-    5.  Upon successful confirmation in the dialog, a non-blocking API call is made to the backend to enqueue the cancellation job.
-    6.  Immediately after the API call is initiated, the UI must display a temporary "toast" notification with the message "Period is being cancelled..." and a clickable 'Undo' button that is visible for 10 seconds.
-    7.  Simultaneously, the status of the corresponding period in the UI list must change to a transitional 'Cancelling...' state, and all actions (like 'Edit' or 'Cancel Period') for that row must be disabled.
-    8.  If the 'Undo' button is clicked within the 10-second window, a separate API call must be triggered to cancel the queued job. On success, the UI should display a confirmation toast (e.g., "Cancellation aborted") and revert the period's status in the list back to 'Active'.
+    5.  Upon successful confirmation, an API call is made to the backend to initiate the soft cancellation.
+    6.  Immediately after the API call, the status of the corresponding period in the UI list must change to a transitional 'Pending Cancellation' state, displaying a prominent countdown timer indicating the time remaining in the 72-hour restoration window.
+    7.  While in the 'Pending Cancellation' state, a 'Restore Period' button must be visible and enabled for that row. All other actions (like 'Edit' or 'Cancel') must be disabled.
+    8.  Clicking 'Restore Period' will trigger a confirmation dialog. Upon confirmation, a separate API call is made to the backend. On success, the UI updates to show the period's status has reverted to 'Active'.
+    9.  Once the 72-hour grace period expires, the UI should automatically update the period's status to the permanent 'Cancelled' state, and the 'Restore Period' button must be removed.
 
 **Story 3.7: Admin Management of Role-Specific Registration Codes**
 
@@ -409,22 +412,23 @@ _UX Note: To improve the first-time user experience, the "Evaluation Management"
     -   **Security & Validation** 7. Registration codes must be generated as non-sequential, random, and sufficiently complex strings (e.g., `UNIV-ROLE-A4B8-C1D9`) to prevent guessing. 8. The API endpoints for code validation and user registration must be protected by a rate limiter to prevent rapid, automated account creation attempts. 9. When an admin attempts to update the 'Max Uses' for a code, the system must validate that the new value is not less than the 'Current Uses' and show an error if it is. 10. A deactivated or expired code cannot be used for new registrations.
     -   **Data Integrity & Traceability** 11. When a user successfully registers, the system must store a reference to the `registration_code_id` in the new user's record, creating a permanent, traceable link. 12. The process for checking and incrementing the 'Current Uses' of a code must be atomic to prevent race conditions from breaching the 'Max Uses' limit.
 
-**Story 3.8: Backend - Process Asynchronous Period Cancellation**
+**Story 3.8: Backend - Process Soft Cancellation, Restoration, and Finalization**
 
--   **As a** System, **I want** to process a period cancellation as a delayed, asynchronous background job, **so that** all data is invalidated correctly, notifications are sent, and the Admin has a brief window to undo the action.
+-   **As a** System, **I want** to process a soft period cancellation by changing its state, provide a mechanism for restoration, and have a scheduled job to finalize the cancellation after the grace period expires, **so that** the process is safe, reversible, and eventually consistent.
 -   **Dev Notes & QA Notes:**
-    -   **Idempotency:** The developer must implement idempotency by checking the state before acting and targeting only unprocessed records in queries.
-    -   **Testing:** QA must create an automated integration test to verify the "undo" window functionality by calling the start and undo endpoints within the specified time limits.
+    -   **Idempotency:** The developer must implement idempotency for all state-changing operations and background jobs.
+    -   **Testing:** QA must create automated integration tests for the entire lifecycle: soft cancel, restore within the window, and automated finalization after the window expires.
 -   **Acceptance Criteria:**
-    1.  A successful API request from Story 3.6 must enqueue a new job in the RQ (Redis Queue) worker.
-    2.  The enqueued job must have an initial execution delay of at least 15 seconds to create a server-side window for a potential 'Undo' action.
-    3.  The system must provide a dedicated API endpoint that allows the frontend to cancel the job from the queue, but only if the job has not yet started executing.
-    4.  After the delay (and if not cancelled), the job's first action is to update the `evaluation_periods` record's status to the transitional 'Cancelling...' state, effectively locking it.
-    5.  The job must process all associated submissions in idempotent batches. The batch size **must be configurable via an environment variable** (e.g., `CANCELLATION_JOB_BATCH_SIZE`) with a **sensible default value (e.g., 500)**. If the job fails and is retried, it must gracefully handle records that are already in the correct 'cancelled' state without error.
-    6.  After successfully invalidating all submissions, the job must enqueue the required notifications in **idempotent batches**. The process must track which notifications have been enqueued to ensure that if the job is retried, it **does not send duplicate notifications**.
-    7.  Once all tasks are complete, the job must update the `evaluation_periods` record's final status to 'Cancelled' and mark itself as successfully completed.
-    8.  If the job fails for any reason after it has started processing, it must be moved to RQ's 'failed' queue, and the period's status must remain 'Cancelling...' to signal that a manual review is required.
-    9.  The entire cancellation job must be designed to be idempotent. If the job is interrupted and retried, it must be able to resume from the start and still produce the correct final state without duplicating actions or causing errors.
+    1.  The backend API endpoint for cancellation must immediately update the `evaluation_periods` record's status to `pending_cancellation` and set a `cancellation_grace_period_ends_at` timestamp to 72 hours in the future.
+    2.  Upon this state change, an asynchronous, idempotent job is enqueued to update all associated `evaluation_submissions` to an 'invalidated_pending_cancellation' state and to notify affected users.
+    3.  A dedicated API endpoint for `POST /periods/{id}/restore` is created. This endpoint must validate that the current time is before the `cancellation_grace_period_ends_at`.
+    4.  A successful restoration request reverts the period's status to `Active` and enqueues a second idempotent job to revert the status of associated submissions and notify users that the period is active again.
+    5.  A separate, scheduled cron job (or equivalent) must run periodically (e.g., every hour). This job's responsibility is to query for `evaluation_periods` where the status is `pending_cancellation` AND the `cancellation_grace_period_ends_at` timestamp is in the past.
+    6.  For each period found by the scheduled job, it will perform the final, permanent cancellation. This includes:
+        -   Updating the period's status to `Cancelled`.
+        -   Updating all associated submissions' status to `cancelled`.
+        -   Performing any final data cleanup.
+    7.  All state-changing operations (initial cancellation, restoration, and finalization) must be idempotent to ensure that if a job is retried, it does not cause errors or duplicate actions.
 
 **Story 3.9: Duplicate an Existing Period Assignment**
 

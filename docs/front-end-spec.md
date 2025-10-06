@@ -32,6 +32,7 @@ The interface must feel clean, trustworthy, and represent a significant upgrade 
 
 | Date       | Version | Description                                                                                                                                                                                             | Author           |
 | :--------- | :------ | :------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ | :--------------- |
+| 2025-10-07 | 2.4     | Added flow for handling deletion of in-use resources. Updated Emergency Cancellation flow with a "Cancelled (Restorable)" state and added a new flow for the restore action.                            | Sally, UX Expert |
 | 2025-10-07 | 2.3     | Added concurrency error handling (409 Conflict) to the Super Admin University Onboarding flow as per architect's request.                                                                               | Sally, UX Expert |
 | 2025-10-06 | 2.2     | Updated the "Super Admin - University Onboarding" user flow to include a two-step approval process, adding a confirmation modal to display file validation summaries before final action.               | Sally, UX Expert |
 | 2025-10-06 | 2.1     | Integrated UI/UX for new admin features (Duplicate Period, Proactive Notifications) from PRD v6.3. Added Notification Center to IA and defined NotificationItem component.                              | Sally, UX Expert |
@@ -624,7 +625,7 @@ flowchart TD
         Job_Enqueued --> Job_Delay["[Worker] Wait 15s (Undo window)"];
         Job_Delay --> Job_Notify["[Worker] Schedule notification jobs<br/>with another delay"];
         Job_Notify --> Job_Process["[Worker] Process submission invalidations<br/>in batches"];
-        Job_Process --> Job_Done["[Worker] Mark Period as 'Cancelled'"];
+        Job_Process --> Job_Done["[Worker] Mark Period as 'Cancelled (Restorable)'"];
     end
 
     M -- "Undo clicked" --> M_Undo[API Call: Dequeue/Cancel Job];
@@ -633,7 +634,7 @@ flowchart TD
     M_Undo --> P_End[Refresh list, status returns to 'Active'];
 
     subgraph "UI Polling"
-        P -- "Polls for status" --> Final_Status{"Period 'Cancelled'?"};
+        P -- "Polls for status" --> Final_Status{"Period 'Cancelled (Restorable)'?"};
         Final_Status -- No --> P;
         Final_Status -- Yes --> P_End;
     end
@@ -643,7 +644,7 @@ flowchart TD
 
 **Final Technical & Developer Notes:**
 
--   **Asynchronous Process:** The entire cancellation is an asynchronous background job. The Admin's initial click on "Confirm Cancellation" should only make a quick API call that enqueues the job and returns an immediate response. The UI then polls a status endpoint to know when the job is complete, updating the period's status from `Cancelling...` to `Cancelled`.
+-   **Asynchronous Process:** The entire cancellation is an asynchronous background job. The Admin's initial click on "Confirm Cancellation" should only make a quick API call that enqueues the job and returns an immediate response. The UI then polls a status endpoint to know when the job is complete, updating the period's status from `Cancelling...` to `Cancelled (Restorable)`.
 -   **Notification Delay & Undo:** To prevent the notification race condition, the background job must first wait \~15 seconds before scheduling the notification tasks. If the Admin clicks "Undo" within the 10-second UI window, the API call must find and **cancel the job from the queue before it begins processing**.
 -   **Transitional State & Locking:** During the entire process (from the moment the job is enqueued until it is complete), the period must be in a transitional `Cancelling...` state. During this time, the backend **must prevent** the creation of a new, overlapping evaluation period to avoid the data conflict risk.
 -   **'Other' Reason Logic:** The dropdown for reasons will include an "Other (requires internal note)" option. If selected, the UI will make the "Internal Admin Notes" text area mandatory. The public notification sent to students will be a safe, generic message, while the specific notes are saved only to the audit log.
@@ -684,6 +685,68 @@ flowchart TD
 
 -   **Centralized Monitor:** This page replaces the "Import Job History" page and must be the single source of truth for monitoring all `RQ` jobs.
 -   **Backend Requirements:** The backend must expose job statuses and provide an endpoint for the "Force Fail" action. All critical background jobs must have a `max_retries` limit and a timeout to prevent infinite loops.
+
+#### **Flow: Admin - Handling In-Use Resources**
+
+-   **User Goal:** To prevent an Admin from accidentally deleting a resource (like a form template) that is actively being used by a scheduled or ongoing evaluation period.
+-   **Entry Points:** The Admin is on the "Form & Period Management" page and clicks the "Delete" action for a form template.
+-   **Success Criteria:** The deletion action is blocked by the system, and the Admin is presented with a clear, informative error message explaining why the action cannot be completed.
+
+**Flow Diagram:**
+
+```mermaid
+flowchart TD
+    A[Start: Admin clicks 'Delete' on a form template] --> B[Open Confirmation Dialog:<br/>'Are you sure you want to delete this template?'];
+    B -- Yes --> C["API Call: DELETE /api/forms/{formId}"];
+    C --> D{Backend: Is this form assigned to any period?};
+    D -- No --> E[Form is successfully deleted];
+    D -- Yes --> F[API responds with 409 Conflict Error];
+    F --> G["UI displays an Error Modal:<br/><b>'Cannot Delete In-Use Template'</b><br/>'This template is assigned to one or more evaluation periods.<br/>Please unassign it before deleting.'"];
+    G --> H[Admin acknowledges the error];
+    H --> I[End: Dialog closes, no action taken];
+    E --> I;
+```
+
+**Technical & Developer Notes:**
+
+-   **UI Component:** The error notification must be a modal dialog (`shadcn/ui` `<AlertDialog>`) to ensure the user actively acknowledges the block. A simple toast notification is not sufficient for this type of destructive action prevention.
+-   **Backend Logic:** The backend must perform a referential integrity check before processing the deletion. If the resource is in use, it must return a `409 Conflict` status code with a clear error message in the response body.
+
+#### **Flow: Admin - Restore Cancelled Period**
+
+-   **User Goal:** To safely restore an evaluation period that was recently cancelled, allowing it to resume without data loss.
+-   **Entry Points:** The Admin is on the "Form & Period Management" page and sees a period with the status "Cancelled (Restorable)".
+-   **Success Criteria:** The period and its associated submissions are restored to their previous "Active" state. The system is ready to accept new submissions for the remainder of the original period duration.
+
+**Flow Diagram:**
+
+```mermaid
+flowchart TD
+    A[Start: Admin clicks 'Restore' on a restorable period] --> B[Open Confirmation Dialog:<br/>'Restore this evaluation period?'];
+    B --> C{Admin confirms};
+    C -- No --> G[End: No action taken];
+    C -- Yes --> D[API Call: Enqueue Restoration Job];
+    D --> E["Period status changes to 'Restoring...'"];
+    E --> F["UI polls for status updates"];
+
+    subgraph "Backend Asynchronous Process"
+       D --> Job_Enqueued["[Worker] Job enqueued"];
+       Job_Enqueued --> Job_Process["[Worker] Re-validate all previously<br/>invalidated submissions in batches"];
+       Job_Process --> Job_Done["[Worker] Mark Period as 'Active'"];
+    end
+
+    subgraph "UI Polling"
+        F -- "Polls for status" --> Final_Status{"Period 'Active'?"};
+        Final_Status -- No --> F;
+        Final_Status -- Yes --> G;
+    end
+```
+
+**Technical & Developer Notes:**
+
+-   **Restoration Window:** The backend should enforce a limited time window (e.g., 30 days) during which a period can be restored. The "Restore" button should not be visible in the UI for periods cancelled longer ago than this window.
+-   **Asynchronous Restoration:** Similar to cancellation, restoration is a background job to handle re-validating potentially large numbers of submissions without blocking the UI.
+-   **State Management:** The backend must correctly transition the period's status from `Cancelled (Restorable)` to `Restoring...` and finally back to `Active`. No new submissions should be allowed during the `Restoring...` state.
 
 ---
 
