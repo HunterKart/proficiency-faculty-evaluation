@@ -32,6 +32,7 @@ The interface must feel clean, trustworthy, and represent a significant upgrade 
 
 | Date       | Version | Description                                                                                                                                                                                             | Author           |
 | :--------- | :------ | :------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ | :--------------- |
+| 2025-10-07 | 2.3     | Added concurrency error handling (409 Conflict) to the Super Admin University Onboarding flow as per architect's request.                                                                               | Sally, UX Expert |
 | 2025-10-06 | 2.2     | Updated the "Super Admin - University Onboarding" user flow to include a two-step approval process, adding a confirmation modal to display file validation summaries before final action.               | Sally, UX Expert |
 | 2025-10-06 | 2.1     | Integrated UI/UX for new admin features (Duplicate Period, Proactive Notifications) from PRD v6.3. Added Notification Center to IA and defined NotificationItem component.                              | Sally, UX Expert |
 | 2025-10-02 | 2.0     | Finalized all user flows and completed all design sections (Branding, Accessibility, Responsiveness, Animation). Added alignment notes for PM. Spec is now ready for architectural handoff.             | Sally, UX Expert |
@@ -369,21 +370,34 @@ flowchart TD
 
     subgraph SuperAdmin [Super Admin]
         B["Dashboard shows Kanban board:<br>New | In Review | Resolved"] --> C{"Drags request card to 'In Review'<br><i>(Locks request)</i>"};
-        C --> D[Clicks card to open detail view];
+
+        C --> C_API[API Call: Update Status];
+        C_API --> C_Conflict{409 Conflict?};
+        C_Conflict -- Yes --> Show_Modal["Display 'Content Out of Date' Modal"];
+        Show_Modal --> B_Refresh[User refreshes board];
+        B_Refresh --> B;
+
+        C_Conflict -- No --> D[Clicks card to open detail view];
         D --> E[Reviews institutional data & documents];
         E --> F["Sees validation summary for<br>optional structure files, if any<br><i>(Cannot view file contents)</i>"];
         F --> G[Clicks 'View History' to see audit trail];
         G --> H{Chooses 'Approve' or 'Reject'};
 
         H -- Reject --> I[Enters reason, confirms];
-        I --> J[API rejects request, sends email];
+        I --> I_API[API Call: Reject Request];
+        I_API --> I_Conflict{409 Conflict?};
+        I_Conflict -- Yes --> Show_Modal;
+        I_Conflict -- No --> J[Request rejected, email sent];
 
         H -- Approve --> K[API fetches validation summary for uploaded files];
         K --> K2[Display Confirmation Modal with Validation Summary];
         K2 --> K3{User confirms final approval};
 
-        K3 -- Yes --> L[Backend Transaction:<br>1. Create university & admin records<br>2. Enqueue optional structure file imports<br>3. Send verification email to new Admin];
         K3 -- No --> D;
+        K3 -- Yes --> L_API[API Call: Approve Request];
+        L_API --> L_Conflict{409 Conflict?};
+        L_Conflict -- Yes --> Show_Modal;
+        L_Conflict -- No --> L[Backend Transaction:<br>1. Create university & admin records<br>2. Enqueue optional structure file imports<br>3. Send verification email to new Admin];
     end
 
     L --> M[Card moves to 'Resolved' column];
@@ -396,6 +410,7 @@ flowchart TD
 -   **Security & Privacy:** The flow is designed to prevent Super Admins from accessing sensitive university PII. They only see a validation summary for the optional academic structure files, not the contents.
 -   **UI/UX:** A Kanban board provides an intuitive visual for managing the queue. A locking mechanism prevents concurrent reviews. An accessible audit trail ensures accountability.
 -   **Confirmation Modal UI Specification:** When a Super Admin approves a request with uploaded files, a final confirmation modal (`shadcn/ui` `<AlertDialog>`) must appear. It must have the title "Confirm University Approval," display a summary of the file validation status (e.g., `"departments.csv: Valid"`, `"subjects.csv: 2 Errors Found"`), and contain a final confirmation button labeled "Approve and Ingest Data."
+-   **Concurrency Error Handling:** Any action that modifies the request state (moving to "In Review," approving, or rejecting) **must** handle a `409 Conflict` response from the API. Upon receiving a `409`, the UI must display the global "Content Out of Date" modal, forcing the user to refresh their view to ensure they are acting on the latest information.
 -   **Automation:** Upon approval, the backend automatically enqueues the pre-validated structural data for import, streamlining setup for the new University Admin and creating a positive first impression.
 -   **Recovery:** The Super Admin UI will have a mechanism to resend the verification email to a new Admin in case of initial email delivery failure.
 
