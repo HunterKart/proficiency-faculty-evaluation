@@ -190,7 +190,7 @@ graph TD
 
 -   **User Goal:** To generate, view, and save actionable suggestions for professional development based on their processed evaluation data.
 -   **Entry Points:** The user clicks on the "AI Assistant" link in the main sidebar navigation.
--   **Success Criteria:** A relevant, AI-generated report is displayed, and the user can successfully save it to their history or download it as a PDF.
+-   **Success Criteria:** An AI-generated report is successfully created and becomes available for download. The user can view the real-time progress of the generation.
 
 **Technical Sequence Diagram:**
 
@@ -199,20 +199,32 @@ sequenceDiagram
     participant User
     participant Frontend
     participant Backend
-    participant AI Model (Gemini API)
+    participant WebSocket
+
     User->>Frontend: Clicks "AI Assistant"
     Frontend->>Backend: GET /api/ai/filters
     Backend-->>Frontend: Returns available terms/periods
     Frontend-->>User: Renders AI Assistant Page with filters
+
     User->>Frontend: Selects filters and clicks "Generate"
-    Frontend->>Frontend: Disables buttons, shows loading state
+    Frontend->>Frontend: Disables button, shows progress indicator (Status: Queued)
     Frontend->>Backend: POST /api/ai/suggestions (body: {term, period})
-    Backend->>Backend: Gathers processed data for user
-    Backend->>AI Model (Gemini API): Constructs and sends prompt
-    AI Model (Gemini API)-->>Backend: Returns generated text
-    Backend-->>Frontend: 200 OK (body: {reportContent})
-    Frontend-->>User: Displays generated report
-    Frontend->>Frontend: Re-enables buttons
+    Backend-->>Frontend: 202 Accepted (body: {jobId})
+    Frontend->>WebSocket: Connects to Job Monitor with jobId
+
+    WebSocket-->>Frontend: Pushes progress update (e.g., "Gathering data...")
+    Frontend-->>User: Updates progress indicator text
+    WebSocket-->>Frontend: Pushes progress update (e.g., "Querying AI model...")
+    Frontend-->>User: Updates progress indicator text
+    WebSocket-->>Frontend: Pushes progress update (e.g., "Formatting results...")
+    Frontend-->>User: Updates progress indicator text
+    WebSocket-->>Frontend: Pushes final status: "Completed"
+    Frontend-->>User: Hides progress, displays "Download PDF" button
+
+    User->>Frontend: Clicks "Download PDF"
+    Frontend->>Backend: GET /api/ai/reports/{jobId}
+    Backend-->>Frontend: Responds with PDF file for download
+    Frontend-->>User: Triggers file download
 ```
 
 #### **Flow: Admin - Form & Period Management**
