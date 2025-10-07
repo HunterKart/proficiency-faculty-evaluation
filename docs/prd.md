@@ -20,8 +20,11 @@ Existing faculty evaluation systems, particularly within the Philippines and at 
 
 #### **Change Log**
 
+### **Change Log**
+
 | Date       | Version | Description                                                                                                                                    | Author   |
 | :--------- | :------ | :--------------------------------------------------------------------------------------------------------------------------------------------- | :------- |
+| 2025-10-07 | 6.6     | Added Story 1.7 for Super Admin user account management and renumbered backup story to 1.8.                                                    | John, PM |
 | 2025-10-07 | 6.5     | Added FR15 to prevent deletion of in-use resources. Refactored Period Cancellation (Story 3.6, 3.8) to a 72-hour restorable soft cancellation. | John, PM |
 | 2025-10-06 | 6.4     | Aligned Story 1.5 with architectural safety measures regarding data file validation during university approval.                                | John, PM |
 | 2025-10-06 | 6.3     | Added "Duplicate Period" (FR13, Story 3.9) and "Proactive Notification" (FR14, Story 3.10) features to improve admin workflow.                 | John, PM |
@@ -239,7 +242,19 @@ The architecture will be a **simple monolith** consisting of a single FastAPI ba
     4.  New users are created with a default password based on their university-issued ID.
     5.  The **user who initiated the import** (either Admin or Super Admin) receives a notification upon completion of the import.
 
-**Story 1.7: Backup and Recovery Strategy**
+**Story 1.7: Super Admin User Management**
+
+-   **As a** Super Admin, **I want** to be able to view, manage the status of, and trigger password resets for user accounts within a specific university, **so that** I can perform essential administrative actions in an emergency.
+-   **Acceptance Criteria:**
+    1.  The Super Admin dashboard must include a "University Management" section listing all active universities.
+    2.  Selecting a university navigates to a detailed management page for that institution.
+    3.  This page must contain a "User Accounts" tab that lists all users associated with the university, with search and filter capabilities.
+    4.  For each user, the Super Admin can view their current status (e.g., 'Active', 'Pending Verification', 'Locked').
+    5.  The Super Admin must have an action to trigger a password reset for any user, which sends an email to the user with a secure, one-time password reset link.
+    6.  The Super Admin must be able to manually change a user's status (e.g., from 'Active' to 'Locked').
+    7.  All administrative actions taken on a user account must be recorded in an audit log for security and traceability.
+
+**Story 1.8: Backup and Recovery Strategy**
 
 -   **As a** Super Admin/DevOps Engineer, **I want** an automated backup and documented recovery procedure for the production database and user-uploaded files, **so that** we can recover from a disaster on the single VPS.
 -   **Acceptance Criteria:**

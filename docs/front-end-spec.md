@@ -32,6 +32,7 @@ The interface must feel clean, trustworthy, and represent a significant upgrade 
 
 | Date       | Version | Description                                                                                                                                                                                                       | Author           |
 | :--------- | :------ | :---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | :--------------- |
+| 2025-10-07 | 2.9     | Added 'Super Admin - Tenant User Management' user flow. Updated Notification Panel component spec to include real-time indicators via WebSocket.                                                                  | Sally, UX Expert |
 | 2025-10-07 | 2.8     | Updated the **'Faculty - Generate AI Suggestions'** flow to be fully asynchronous, leveraging the Job Monitor WebSocket for real-time progress updates. Simplified the report export to a direct PDF download.    | Sally, UX Expert |
 | 2025-10-07 | 2.7     | Refined Dashboard and Report Center user flows to specify component-level data refetching for filters and a unified asynchronous process for all report generation, respectively.                                 | Sally, UX Expert |
 | 2025-10-07 | 2.6     | Enhanced the **'Flagged Evaluation Review'** user flow. The specification now requires the UI to dynamically highlight the exact text that triggered the flag, using API-provided data, to improve Admin clarity. | Sally, UX Expert |
@@ -776,6 +777,47 @@ flowchart TD
 -   **Asynchronous Restoration:** Similar to cancellation, restoration is a background job to handle re-validating potentially large numbers of submissions without blocking the UI.
 -   **State Management:** The backend must correctly transition the period's status from `Cancelled (Restorable)` to `Restoring...` and finally back to `Active`. No new submissions should be allowed during the `Restoring...` state.
 
+#### **Flow: Super Admin - Tenant User Management**
+
+-   **User Goal:** To manage users for a specific university tenant, including deactivating accounts and triggering password resets.
+-   **Entry Points:** The Super Admin navigates from their main dashboard to the "University Management" page.
+-   **Success Criteria:** The selected user's status is updated in the system (e.g., deactivated), or a password reset email is successfully dispatched to the user. The user list in the UI reflects the change immediately.
+
+**Flow Diagram:**
+
+```mermaid
+flowchart TD
+    A[Start: Super Admin on Dashboard] --> B[Navigates to 'University Management'];
+    B --> C[Displays table of all universities];
+    C --> D{Clicks 'Manage Users' for a specific university};
+    D --> E[Navigate to Tenant User Management Page];
+    E --> F[Displays table of all users for that university<br/>with columns: Name, Role, Status, Actions];
+
+    subgraph "User Actions"
+        F --> G{Selects an action for a user};
+        G -- 'Deactivate User' --> H[Open Confirmation Dialog:<br/>'Deactivate this user?'];
+        G -- 'Send Password Reset' --> I[Open Confirmation Dialog:<br/>'Send password reset email?'];
+    end
+
+    H -- Yes --> J[API Call: Deactivate user];
+    I -- Yes --> K[API Call: Trigger password reset];
+
+    J --> L{API Success?};
+    K --> L;
+
+    L -- Yes --> M[Show Success Toast<br/>UI table updates to reflect new status];
+    L -- No --> N[Show Error Toast];
+
+    M --> O[End];
+    N --> F;
+```
+
+**Technical & Developer Notes:**
+
+-   **UI Components:** This feature will reuse the standard `shadcn/ui` components for `<Table>`, `<Button>`, and `<AlertDialog>` to maintain consistency.
+-   **State Management:** After a successful action, the `TanStack Query` cache for the university's user list must be invalidated to ensure the UI immediately reflects the change.
+-   **Security:** All API endpoints for these actions must be protected and verify that the calling user has Super Admin privileges.
+
 ---
 
 ### **Section 4: Wireframes & Mockups**
@@ -808,6 +850,7 @@ The project will adhere to a consistent design system built upon **`shadcn/ui`**
     -   **`FilterBar`:** A component that groups all standard filter dropdowns.
     -   **`ModeSwitcher`:** The control used by Admins and Department Heads to switch their data view context.
     -   **`CommentViewerDialog`**: A dialog component triggered by clicking on a chart segment. It displays anonymized comments and enforces the anonymity threshold by showing a privacy message if the response count is too low.
+    -   **`NotificationPanel`**: A component, likely a dropdown or sheet, that contains a list of `NotificationItem` components. Its trigger (e.g., a bell icon in the main header) **must display a real-time indicator** (e.g., a red dot) instantly when a new notification is received via the WebSocket connection, without requiring a page refresh.
     -   **`NotificationItem`**: A reusable component to display a single notification in a list or panel, providing key information (title, message, timestamp) and a clear call-to-action button.
 
 ---
