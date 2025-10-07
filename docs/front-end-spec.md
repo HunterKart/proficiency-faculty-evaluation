@@ -28,10 +28,11 @@ The interface must feel clean, trustworthy, and represent a significant upgrade 
     4.  **Enforced Consistency:** Programmatically enforce a consistent visual language, component library, and interaction patterns (like sidebar navigation and card-based layouts) throughout the application to ensure a predictable user experience.
         -   **_Developer Note:_** _Consistency will be enforced. All styling will use Tailwind CSS utility classes. All core UI elements (buttons, forms, cards) will be derived from 'shadcn/ui' primitives. The **Monorepo** structure should be leveraged to create a shared UI package for any custom-built, reusable components._
 
-#### **Changelog**
+### **Changelog**
 
 | Date       | Version | Description                                                                                                                                                                                                       | Author           |
 | :--------- | :------ | :---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | :--------------- |
+| 2025-10-07 | 2.7     | Refined Dashboard and Report Center user flows to specify component-level data refetching for filters and a unified asynchronous process for all report generation, respectively.                                 | Sally, UX Expert |
 | 2025-10-07 | 2.6     | Enhanced the **'Flagged Evaluation Review'** user flow. The specification now requires the UI to dynamically highlight the exact text that triggered the flag, using API-provided data, to improve Admin clarity. | Sally, UX Expert |
 | 2025-10-07 | 2.5     | Refined **Admin - Background Job Monitoring** flow to distinguish between success and partial failure statuses. Added new metadata display for import job details (Total Rows, Rows Processed, Rows Failed).      | Sally, UX Expert |
 | 2025-10-07 | 2.4     | Added flow for handling deletion of in-use resources. Updated Emergency Cancellation flow with a "Cancelled (Restorable)" state and added a new flow for the restore action.                                      | Sally, UX Expert |
@@ -437,13 +438,7 @@ flowchart TD
     E --> G["User selects export format<br>(PDF or CSV/Excel)"];
     G --> H{User clicks 'Generate Report'};
 
-    subgraph HybridLogic [Smart Hybrid Logic]
-        H --> H1{Estimate report complexity};
-        H1 -- "Small Report" --> H_Sync[Generate synchronously<br>Show loading spinner];
-        H1 -- "Large Report" --> H_Async[Enqueue asynchronous job<br>Redirect to 'My Reports' tab];
-    end
-
-    H_Sync --> N_DL[Trigger immediate file download];
+    H --> H_Async[Enqueue asynchronous job<br>Redirect to 'My Reports' tab];
 
     subgraph MyReportsTab [My Reports Tab]
         H_Async --> M[New job appears at top of list<br>Status: 'Queued', with ETA];
@@ -453,14 +448,14 @@ flowchart TD
     end
 
     M3 --> N{User clicks download link};
-    N --> N_DL;
+    N --> N_DL[Trigger file download];
     N_DL --> P[End: File is downloaded];
 ```
 
 **Technical & Developer Notes:**
 
 -   **Distinction is Key:** The "Generate Report" tab is for creating **standardized reports**. It is functionally separate from the "Export this View" feature on the **Explore Data** tab, which is for ad-hoc data snapshots.
--   **Asynchronous Process:** The entire report generation lifecycle is managed through a "Report Center" that supports both immediate downloads for small jobs and a robust inbox system for large, asynchronous jobs, providing users with clear status updates, ETAs, and control.
+-   **Asynchronous Process:** To provide a consistent and non-blocking user experience, all report generation is managed through the asynchronous "My Reports" inbox system. This allows users to continue working while large reports are generated in the background, providing them with clear status updates, ETAs, and control.
 -   **Backend Libraries:** The backend will use **WeasyPrint** for PDF generation and **pandas** for CSV/Excel file creation.
 
 #### **Flow: Managerial & Administrative Review**
@@ -487,6 +482,10 @@ graph TD
     J --> L[e.g., Navigate to Report Center];
     J --> M[End Session];
 ```
+
+**Technical & Developer Notes:**
+
+-   **Efficient Data Fetching**: To ensure a fast and responsive user experience on the "Explore Data" tab, filter changes should not trigger a full dashboard reload. Instead, filter adjustments will trigger targeted `TanStack Query` refetches only for the components affected by that specific filter. For example, changing the "Subject" filter should only refetch data for the word cloud and sentiment charts, leaving other components with their existing cached data.
 
 #### **Final & Approved Specification: Student Resubmitting a Flagged Evaluation**
 
