@@ -10,11 +10,12 @@ N/A - This is a greenfield project. The architecture will be designed from scrat
 
 ### **Change Log**
 
-| Date           | Version | Description                                                                                                          | Author                 |
-| :------------- | :------ | :------------------------------------------------------------------------------------------------------------------- | :--------------------- |
-| **2025-10-07** | **1.2** | **Completed the entire API Specification section, integrating all 8 refined API groups.**                            | **Winston, Architect** |
-| 2025-10-06     | 1.1     | Completed the entire Data Models section, including all 7 entity groups, after thorough refinement and verification. | Winston, Architect     |
-| 2025-10-05     | 1.0     | Initial architectural draft based on PRD v6.2 and UI/UX Spec v2.0.                                                   | Winston, Architect     |
+| Date           | Version | Description                                                                                                                             | Author                 |
+| :------------- | :------ | :-------------------------------------------------------------------------------------------------------------------------------------- | :--------------------- |
+| **2025-10-07** | **1.3** | **Finalized and integrated the complete Components section**, incorporating all six refined component groups from architectural review. | **Winston, Architect** |
+| 2025-10-07     | 1.2     | Completed the entire API Specification section, integrating all 8 refined API groups.                                                   | Winston, Architect     |
+| 2025-10-06     | 1.1     | Completed the entire Data Models section, including all 7 entity groups, after thorough refinement and verification.                    | Winston, Architect     |
+| 2025-10-05     | 1.0     | Initial architectural draft based on PRD v6.2 and UI/UX Spec v2.0.                                                                      | Winston, Architect     |
 
 ---
 
@@ -2679,3 +2680,382 @@ paths:
                 "202":
                     description: "Password reset email has been queued for sending."
 ```
+
+---
+
+## **Components**
+
+This section breaks down the **Proficiency** platform into its primary logical components. The components are organized into functional groups that align with the core domains of the application. Each component's responsibility, interfaces, dependencies, and core technologies are defined to provide a clear blueprint for implementation.
+
+### **Group 1: Core Platform & Tenancy Services**
+
+This group defines the foundational, cross-cutting components that enable the multi-tenant platform to operate. This includes user identity, authentication, notifications, and the top-level administrative functions for managing tenants.
+
+#### **`[Frontend]` Application Shell**
+
+-   **Responsibility:** Serves as the main layout container for the authenticated user experience. It holds the persistent elements like the collapsible sidebar navigation, the main header, and the content area where individual pages are rendered. It also manages the root-level application state, such as the current user's session.
+-   **Key Interfaces:** A root-level React component that utilizes `React Router` to render child routes. It will expose a context or state hook for child components to interact with global UI elements (e.g., toggling the sidebar).
+-   **Dependencies:** `React Router`, `Authentication Service` (via a global auth hook), `Notification Center`.
+-   **Technology Stack:** React, TypeScript, Tailwind CSS, `shadcn/ui` (for layout primitives), `lucide-react` (for icons).
+
+#### **`[Frontend]` Authentication Components**
+
+-   **Responsibility:** Manages the entire user-facing authentication lifecycle. This includes the distinct login forms for regular users and Super Admins, the multi-step university registration process, and the user's own profile management and password change forms.
+-   **Key Interfaces:** A set of pages/routes including `/login`, `/register`, `/super-admin/login`, and `/profile`. It will consist of components such as `LoginForm`, `RegistrationForm`, and `UserProfileForm`.
+-   **Dependencies:** `Authentication Service [Backend]`, `React Hook Form` & `Zod` (for robust client-side validation), `TanStack Query` (for handling API mutations like login and registration).
+-   **Technology Stack:** React, TypeScript, React Hook Form, Zod, TanStack Query, `shadcn/ui` (for forms, inputs, buttons).
+
+#### **`[Frontend]` Notification Center**
+
+-   **Responsibility:** **Subscribes** to a WebSocket channel to receive live events from backend services. It is responsible for displaying real-time, in-app notifications to the user and managing their read/unread status. It must provide an immediate visual indicator when a new notification arrives without requiring a page refresh.
+-   **Key Interfaces:** A `NotificationPanel` component, rendered within the `Application Shell`, which displays a list of `NotificationItem` components.
+-   **Dependencies:** A WebSocket connection for receiving real-time events, and the `Notification Service [Backend]` for fetching historical notifications and updating their status via REST API calls.
+-   **Technology Stack:** React, TypeScript, `shadcn/ui` (Dropdown Menu or Sheet), `lucide-react` (icons).
+
+#### **`[Frontend]` Super Admin Module**
+
+-   **Responsibility:** Provides the complete user interface for Super Admins to manage the university onboarding lifecycle and perform essential user management for tenants.
+-   **Key Interfaces:** A suite of components rendered under the `/super-admin/*` route prefix, including the `UniversityRequestBoard` (Kanban), `UniversityDetailsView`, and `TenantUserManagementTable`.
+-   **Dependencies:** `University Onboarding Service [Backend]` and `User & Role Service [Backend]` via API calls. It will heavily utilize `TanStack Query` for fetching, caching, and invalidating data to ensure the UI stays in sync.
+-   **Technology Stack:** React, TypeScript, TanStack Query, `shadcn/ui` (Table, Dialog, Card).
+
+#### **`[Backend]` Authentication Service**
+
+-   **Responsibility:** Manages all security-critical logic. This includes credential verification (password hashing with `bcrypt`), multi-factor authentication for Super Admins (`pyotp`), and the generation/validation of stateless JWT access and refresh tokens. It also handles the token invalidation mechanism via the `tokenVersion` field in the user models.
+-   **Key Interfaces:** Exposes the API endpoints under `/auth/*` and `/super-admin/login/*` as defined in the API Specification.
+-   **Dependencies:** `User & Role Service` (to fetch user data), Database (to access `users` and `super_admins` tables).
+-   **Technology Stack:** Python, FastAPI, SQLAlchemy, `passlib[bcrypt]`, `pyotp`, `python-jose`.
+
+#### **`[Backend]` User & Role Service**
+
+-   **Responsibility:** Manages the business logic for user accounts, roles, and profiles. It handles CRUD operations and ensures that actions are authorized based on the user's role and tenancy.
+-   **Key Interfaces:** Exposes API endpoints such as `GET /profile`, `PUT /profile`, and the tenant-specific user management endpoints for Super Admins.
+-   **Dependencies:** Database (to interact with `users`, `roles`, and associated tables).
+-   **Technology Stack:** Python, FastAPI, SQLAlchemy, Pydantic.
+
+#### **`[Backend]` University Onboarding Service**
+
+-   **Responsibility:** Manages the entire lifecycle of a `UniversityRegistrationRequest`, from submission to approval or rejection. The approval process, which creates both the `University` and initial `User` records, **must be executed within a single, atomic database transaction** to guarantee data consistency. Subsequent actions, like triggering notifications, are dispatched only after the transaction's successful commit.
+-   **Key Interfaces:** Exposes the API endpoints under `/super-admin/university-requests/*` and the public `POST /university-requests`. These endpoints should be designed to be **idempotent** where applicable to prevent duplicate actions on retries.
+-   **Dependencies:** Database, `File Storage` (for uploaded documents), `Notification Service` (to dispatch emails), `Redis` (to enqueue subsequent import jobs if applicable).
+-   **Technology Stack:** Python, FastAPI, SQLAlchemy, Pydantic.
+
+#### **`[Backend]` Notification Service**
+
+-   **Responsibility:** A centralized service for creating, managing, and dispatching notifications. Asynchronous jobs dispatched by this service, especially those triggering external actions like sending emails, **must be designed to be idempotent** and include a retry strategy to handle transient failures. It is also responsible for broadcasting events to the WebSocket channel for real-time client updates.
+-   **Key Interfaces:** Exposes the `GET /notifications` and `PUT /notifications/{id}/status` API endpoints. Internally, it provides a function like `create_notification()` for other services to call.
+-   **Dependencies:** Database (`notifications` table), `Redis` (to enqueue email sending jobs), `User & Role Service` (to get recipient details), WebSocket Manager.
+-   **Technology Stack:** Python, FastAPI, SQLAlchemy, Pydantic, `websockets`.
+
+---
+
+### **Group 2: Academic & Data Management Services**
+
+This group encompasses all components required for University Admins to build out and manage their institution's foundational data, either manually or via bulk import. This group also includes the central job monitoring system, which is critical for observing and managing all asynchronous operations across the platform.
+
+#### **`[Frontend]` Academic Structure Module**
+
+-   **Responsibility**: Provides the user interface for University Admins to perform manual Create, Read, Update, and Delete (CRUD) operations on the core academic hierarchy: **Departments**, **Programs**, and **Subjects**. This component is for making granular corrections or additions without needing a full file import.
+-   **Key Interfaces**: A set of pages under the `/admin/academic-structure/*` route, featuring tables for listing entities and forms (within dialogs or on separate pages) for creating and editing them.
+-   **Dependencies**: `Academic Structure Service [Backend]`, `TanStack Query`, `shadcn/ui` components.
+-   **Technology Stack**: React, TypeScript, TanStack Query, `shadcn/ui` (Table, Dialog, Form, Input), React Router.
+
+---
+
+#### **`[Frontend]` Bulk Import Module**
+
+-   **Responsibility**: Implements the multi-step wizard UI for uploading, validating, and processing bulk data files (CSV/Excel). It is designed to provide clear, actionable feedback to the Admin, including row-specific error messages if validation fails, ensuring data quality before processing begins.
+-   **Key Interfaces**: A page at `/admin/bulk-import` that guides the user through file selection, type detection, validation, and a final confirmation step before enqueuing the job.
+-   **Dependencies**: `Bulk Import Service [Backend]`.
+-   **Technology Stack**: React, TypeScript, `shadcn/ui` (File Input, Progress Bar, Alert Dialog, Table for displaying errors).
+
+---
+
+#### **`[Frontend]` Job Monitor Module**
+
+-   **Responsibility**: A centralized dashboard that provides Admins with a **real-time view** of all background jobs, replacing the static "Import History" page. It must display job status (including **`Completed_Partial_Failure`**), progress, and provide actions to manage jobs, such as `Cancel`, `Download Error Report`, and `Force Fail`.
+-   **Key Interfaces**: A page at `/admin/job-monitor` that establishes a WebSocket connection to receive live updates. It will primarily feature a table of all background jobs.
+-   **Dependencies**: `Job Monitoring Service [Backend]` (via WebSockets for real-time updates and a REST API for initial data load and performing actions).
+-   **Technology Stack**: React, TypeScript, `shadcn/ui` (Table, Button, Progress Bar, AlertDialog), native WebSocket API.
+
+---
+
+#### **`[Backend]` Academic Structure Service**
+
+-   **Responsibility**: Exposes the secure API endpoints for all manual CRUD operations on the academic hierarchy (`Departments`, `Programs`, `Subjects`). This service is responsible for enforcing all business logic, relational constraints, and tenancy rules. It must gracefully handle database errors for violations of **`ON DELETE RESTRICT`** constraints and return a user-friendly `409 Conflict` response.
+-   **Key Interfaces**: RESTful API endpoints under `/admin/academic-structure/*` (e.g., `POST /admin/academic-structure/departments`).
+-   **Dependencies**: Database, `Authentication Service`.
+-   **Technology Stack**: Python, FastAPI, SQLAlchemy, Pydantic.
+
+---
+
+#### **`[Backend]` Bulk Import Service**
+
+-   **Responsibility**: Manages the two-stage file import process. The first stage involves accepting a file, performing a comprehensive validation, and returning either a detailed error report or a temporary ID for the validated file. The second stage accepts this ID and enqueues the processing job in Redis.
+-   **Key Interfaces**: API endpoints `POST /admin/bulk-import/validate` and `POST /admin/bulk-import/process`.
+-   **Dependencies**: `Redis`, `File Storage`, `Data Import Job Handlers [Worker]`.
+-   **Technology Stack**: Python, FastAPI, Pydantic, Pandas.
+
+---
+
+#### **`[Backend]` Job Monitoring Service**
+
+-   **Responsibility**: Acts as the single source of truth for the state of all background jobs. It manages the `BackgroundTask` database table, provides REST endpoints for listing jobs and initiating management actions (`cancel`, `force-fail`), and **broadcasts** status and progress updates over the WebSocket channel to subscribed clients. It must support the `completed_partial_failure` status.
+-   **Key Interfaces**: REST API endpoints under `/admin/job-monitor/*` and the WebSocket endpoint at `/ws/job-progress/{jobId}`.
+-   **Dependencies**: Database (`BackgroundTask` table), `Redis` (to query the state of RQ jobs), WebSocket Manager.
+-   **Technology Stack**: Python, FastAPI, SQLAlchemy, Pydantic, `websockets`.
+
+---
+
+#### **`[Worker]` Data Import Job Handlers**
+
+-   **Responsibility**: A collection of distinct, asynchronous tasks that execute the data import logic. All import jobs **must process data in transactional batches**. The job's progress must be updated after each successful batch. If a batch fails, the job should continue to the next batch and finish with a **`completed_partial_failure`** status, generating an error report containing only the rows from failed batches.
+-   **Key Interfaces**: These are Python functions consumed from the Redis job queue; they do not expose any network APIs.
+-   **Dependencies**: Database, `Notification Service`.
+-   **Technology Stack**: Python, RQ, SQLAlchemy, Pandas.
+
+---
+
+### **Group 3: Evaluation Lifecycle Management**
+
+This group contains all components related to the administrative setup of the evaluation process. It empowers University Admins to create dynamic form templates, schedule evaluation periods, and manage the entire lifecycle of an evaluation from creation to potential cancellation.
+
+#### **`[Frontend]` Form Builder Module**
+
+-   **Responsibility**: Provides a rich, interactive user interface for Admins to create, manage, and preview dynamic evaluation form templates. This includes defining criteria, adding weighted sections, and managing both Likert-scale and open-ended questions. It **must implement an auto-save feature** that periodically saves changes for templates in a `draft` status to prevent data loss during long editing sessions.
+-   **Key Interfaces**: A main page at `/admin/form-management` featuring a table of existing templates, and a multi-step wizard or tabbed interface for the form creation/editing process.
+-   **Dependencies**: `Form Template Service [Backend]`, `TanStack Query` for all data operations, `shadcn/ui` components.
+-   **Technology Stack**: React, TypeScript, TanStack Query, React Hook Form, Zod, `shadcn/ui` (Table, Stepper, Form), `dnd-kit` (for reordering).
+
+---
+
+#### **`[Frontend]` Period Scheduler Module**
+
+-   **Responsibility**: Implements the user interface for Admins to schedule a new evaluation period. This includes selecting the academic term, setting start/end dates, and assigning the appropriate form templates for student and department head evaluators. It also handles the UI for duplicating, canceling, and restoring periods.
+-   **Key Interfaces**: A page at `/admin/period-management` that lists all periods and provides actions. A form, either on a separate page or in a dialog, is used for creating/editing a scheduled period.
+-   **Dependencies**: `Evaluation Period Service [Backend]`, `TanStack Query` for data management, `shadcn/ui` components.
+-   **Technology Stack**: React, TypeScript, TanStack Query, `shadcn/ui` (Table, Calendar, AlertDialog for confirmations).
+
+---
+
+#### **`[Frontend]` Registration Code Manager**
+
+-   **Responsibility**: Provides the UI for Admins to create, view, and manage role-specific registration codes for their university. This includes setting usage limits, viewing current usage, and deactivating or regenerating codes.
+-   **Key Interfaces**: A dedicated section within the `/admin/user-management` page that displays a table of registration codes and provides forms/dialogs for management actions.
+-   **Dependencies**: The backend API endpoints for managing registration codes.
+-   **Technology Stack**: React, TypeScript, TanStack Query, `shadcn/ui` (Table, Dialog, Form, Switch).
+
+---
+
+#### **`[Backend]` Form Template Service**
+
+-   **Responsibility**: Exposes the API for all CRUD operations on `EvaluationFormTemplates`, `EvaluationCriteria`, and `EvaluationQuestions`. It is responsible for enforcing all business logic, such as ensuring criteria weights sum to 100 before a form can be activated and preventing the deletion of a template assigned to an active period (**FR15**). It **must implement optimistic locking using a `version` field**. Any request that modifies a template must include the current version, and the service will reject requests with a stale version by returning a `409 Conflict`. It must also support partial updates to accommodate the frontend's **auto-save functionality** for `draft` templates.
+-   **Key Interfaces**: RESTful API endpoints under `/admin/form-templates/*`.
+-   **Dependencies**: Database, `Authentication Service`.
+-   **Technology Stack**: Python, FastAPI, SQLAlchemy, Pydantic.
+
+---
+
+#### **`[Backend]` Evaluation Period Service**
+
+-   **Responsibility**: Manages the lifecycle of evaluation periods. This service handles the API for scheduling, updating, and initiating the cancellation or restoration of a period. It ensures that no overlapping periods can be scheduled for the same group of evaluators and prevents edits to periods that are already active.
+-   **Key Interfaces**: RESTful API endpoints under `/admin/evaluation-periods/*`, including actions like `POST /.../{id}/duplicate` and `POST /.../{id}/cancel`.
+-   **Dependencies**: Database, `Authentication Service`, `Redis` (to enqueue cancellation/restoration jobs).
+-   **Technology Stack**: Python, FastAPI, SQLAlchemy, Pydantic.
+
+---
+
+#### **`[Worker]` Period Cancellation Job Handler**
+
+-   **Responsibility**: An asynchronous task that executes the logic for the "soft" cancellation and restoration of an evaluation period. It handles the batch update of submission statuses and dispatches notifications to affected users, operating within the defined grace period logic.
+-   **Key Interfaces**: A Python function consumed from the Redis job queue; it does not expose any network APIs.
+-   **Dependencies**: Database, `Notification Service`.
+-   **Technology Stack**: Python, RQ, SQLAlchemy.
+
+---
+
+### **Group 4: Evaluation Submission & Integrity Engine**
+
+This group defines the core user-facing evaluation workflow and the backend engine that ensures data quality through automated flagging and administrative review.
+
+#### **`[Frontend]` Evaluation Form Component**
+
+-   **Responsibility**: Renders the dynamic evaluation form for students and department heads. It must enforce all client-side validation rules, such as minimum time on form and word counts, and implement the "Pre-Submission Nudge" for low-variance scores.
+-   **Key Interfaces**: A dynamic React component that takes a form structure (criteria, questions) as a prop and renders the appropriate inputs.
+-   **Dependencies**: `Evaluation Submission Service [Backend]`, `React Hook Form` & `Zod` for validation, `TanStack Query` for the submission mutation.
+-   **Technology Stack**: React, TypeScript, React Hook Form, Zod, `shadcn/ui` (Form, Input, Accordion, Button).
+
+---
+
+#### **`[Frontend]` Flagged Evaluation Module**
+
+-   **Responsibility**: Provides the administrative interface for reviewing and resolving flagged evaluations. It must display the submission data in a side-by-side comparison and dynamically highlight the specific text that triggered a flag, using metadata provided by the backend.
+-   **Key Interfaces**: A page at `/admin/flagged-evaluations` featuring a table of pending flags and a detailed review dialog or sheet.
+-   **Dependencies**: `Flagged Evaluation Service [Backend]`, `TanStack Query`, `shadcn/ui` components.
+-   **Technology Stack**: React, TypeScript, TanStack Query, `shadcn/ui` (Table, Dialog, Tabs).
+
+---
+
+#### **`[Backend]` Evaluation Submission Service**
+
+-   **Responsibility**: Ingests completed evaluation submissions from users. It performs initial synchronous validation and, upon success, saves the submission and enqueues the necessary asynchronous jobs for data integrity checks and analysis.
+-   **Key Interfaces**: A `POST /evaluations/submissions` endpoint.
+-   **Dependencies**: Database, `Redis` (to enqueue jobs), `Authentication Service`.
+-   **Technology Stack**: Python, FastAPI, SQLAlchemy, Pydantic.
+
+---
+
+#### **`[Backend]` Flagged Evaluation Service**
+
+-   **Responsibility**: Manages the lifecycle of flagged evaluations. It provides APIs for listing pending flags and for an Admin to resolve a flag with one of the three actions: 'Approve', 'Archive', or 'Request Resubmission'. It must implement optimistic locking to prevent concurrent resolutions.
+-   **Key Interfaces**: RESTful API endpoints under `/admin/flagged-evaluations/*`.
+-   **Dependencies**: Database, `Notification Service`, `Authentication Service`.
+-   **Technology Stack**: Python, FastAPI, SQLAlchemy, Pydantic.
+
+---
+
+#### **`[Worker]` Data Integrity Job Handlers**
+
+-   **Responsibility**: A collection of asynchronous tasks that perform automated data quality checks. The specific flagging algorithms (e.g., 'Recycled Content' similarity check) **must be implemented as pluggable modules or strategies**. This allows the core flagging engine to remain stable while the detection methods can be updated or replaced in the future. All numerical thresholds used by these handlers (e.g., word counts, similarity percentages) **must be loaded from a central configuration** and not hardcoded.
+-   **Key Interfaces**: Python functions consumed from the Redis job queue; they do not expose any network APIs.
+-   **Dependencies**: Database, `Flagged Evaluation Service` (to create flags if issues are found).
+-   **Technology Stack**: Python, RQ, SQLAlchemy.
+
+---
+
+### **Group 5: Data Analysis & Visualization Pipeline**
+
+This group covers the entire pipeline, from the raw data processing jobs to the final presentation layer. It includes the backend worker jobs that perform analysis and the frontend components that render the results.
+
+#### `[Frontend]` Dashboard Shell
+
+-   **Responsibility**: Serves as the main container and orchestrator for all dashboard pages. It is responsible for rendering the overall layout, including the **tiered structure (KPIs, Actionable Insights, General Visualizations)**, the persistent filter bars, and the "mode-switcher" control for Department Heads and Admins. Critically, it must also **display the current data status** (e.g., a "Provisional Data" banner) based on API metadata to fulfill the requirements of FR8.
+-   **Key Interfaces**: A React component that fetches initial dashboard data and passes it down to its children. It listens for events from child components (like filters) to trigger targeted data refetches.
+-   **Dependencies**: `Dashboard Data Service [Backend]`, `Visualization Components`, `Comment Viewer Component`.
+-   **Technology Stack**: React, TypeScript, TanStack Query, `shadcn/ui` (Card, Select, Tabs, Banner/Alert).
+
+---
+
+#### `[Frontend]` Visualization Components
+
+-   **Responsibility**: A set of reusable client components that wrap the ECharts library to render the specific visualizations required by the PRD (Word Clouds, Bar Charts, and Performance Trend Line Charts). These components are responsible for accepting structured data, rendering the appropriate chart, and **emitting events when a user interacts with a data point** (e.g., clicking a bar segment) to trigger the `Comment Viewer`.
+-   **Key Interfaces**: Individual React components (`WordCloudChart`, `SentimentBarChart`, etc.) that accept ECharts-compatible data and configuration options as props, along with an `onDataPointClick` event handler.
+-   **Dependencies**: `Echarts` and `echarts-wordcloud` libraries.
+-   **Technology Stack**: React, TypeScript, ECharts.
+
+---
+
+#### `[Frontend]` Comment Viewer Component
+
+-   **Responsibility**: A dialog component that fetches and displays anonymized, raw open-ended comments for a specific data slice. It is critically responsible for **enforcing the anonymity threshold on the client-side**, showing a privacy message (e.g., "More responses are needed to view comments") instead of the comments if the underlying response count is too low, as required by PRD Story 5.5.
+-   **Key Interfaces**: A modal/dialog component that is triggered by an event from a `Visualization Component` and is passed the necessary filters to fetch the relevant comments from the `Comment Data Service`.
+-   **Dependencies**: `Comment Data Service [Backend]`, `shadcn/ui` components.
+-   **Technology Stack**: React, TypeScript, `shadcn/ui` (Dialog).
+
+---
+
+#### `[Backend]` Dashboard Data Service
+
+-   **Responsibility**: Exposes the API endpoints required to populate all dashboards with **aggregated and calculated data**. It implements the hybrid data retrieval strategy: for finalized periods, it fetches pre-calculated data from aggregate tables; for active, provisional periods, it calculates results on-the-fly and caches them in Redis to ensure performance. This service **does not** handle raw comment data.
+-   **Key Interfaces**: A `GET /dashboard` endpoint that accepts various filters (term, period, view_mode) and returns a complex JSON object structured for the frontend dashboards.
+-   **Dependencies**: Database (aggregate and raw data tables), `Redis` (for caching provisional data), `Authentication Service`.
+-   **Technology Stack**: Python, FastAPI, SQLAlchemy, Pydantic, Redis.
+
+---
+
+#### `[Backend]` Comment Data Service
+
+-   **Responsibility**: A dedicated, secure service that handles fetching raw open-ended comments. Its primary responsibility is to **enforce the anonymity threshold on the server-side**. It will reject any request for comments where the underlying response count for the requested data slice is below the configured minimum, returning a `403 Forbidden` error to protect user privacy.
+-   **Key Interfaces**: A `GET /comments` endpoint that accepts the same filters as the dashboard to define a specific data slice.
+-   **Dependencies**: Database (raw `evaluation_open_ended_answers` table), `Authentication Service`.
+-   **Technology Stack**: Python, FastAPI, SQLAlchemy, Pydantic.
+
+---
+
+#### `[Worker]` Quantitative Analysis Job
+
+-   **Responsibility**: An asynchronous task that processes the numerical Likert-scale answers from a submission. It executes the specific calculation flow defined in PRD Story 5.1: **first, it calculates the median score for each question; second, it calculates the mean of those medians for each criterion; and finally, it calculates the final weighted mean (`quant_score_raw`)**, saving the results to the `numerical_aggregates` table.
+-   **Key Interfaces**: A Python function consumed from the Redis job queue, managed by the `Analysis Orchestrator`.
+-   **Dependencies**: Database.
+-   **Technology Stack**: Python, RQ, SQLAlchemy, NumPy/SciPy (for statistical calculations).
+
+---
+
+#### `[Worker]` Qualitative Analysis Job
+
+-   **Responsibility**: An asynchronous task that processes the open-ended feedback from a submission. It uses the local AI models (XLM-RoBERTa for sentiment, KeyBERT for keywords) to analyze the text and saves the structured results to the `open_ended_sentiments` and `open_ended_keywords` tables, as required by PRD Story 5.2.
+-   **Key Interfaces**: A Python function consumed from the Redis job queue, managed by the `Analysis Orchestrator`.
+-   **Dependencies**: Database, local AI models (Transformers, PyTorch, KeyBERT).
+-   **Technology Stack**: Python, RQ, SQLAlchemy, Transformers, PyTorch.
+
+---
+
+#### `[Worker]` Final Aggregation Job
+
+-   **Responsibility**: The final job in the analysis pipeline, which is orchestrated to run only after the Quantitative and Qualitative analysis jobs are complete. It **fetches the score weighting from the `UniversitySetting` table** (e.g., `score_weight_quantitative`), calculates the cohort baselines, computes the normalized **Z-scores (`z_quant` and `z_qual`)**, and calculates the final weighted score (`final_score_60_40`). It also handles locking the data by setting the `is_final_snapshot` flag when a period is finalized, fulfilling PRD Story 5.3.
+-   **Key Interfaces**: A Python function consumed from the Redis job queue, triggered by the `Analysis Orchestrator`.
+-   **Dependencies**: Database (`UniversitySetting`, `NumericalAggregate`, `SentimentAggregate` tables).
+-   **Technology Stack**: Python, RQ, SQLAlchemy, NumPy/SciPy.
+
+---
+
+### **Group 6: AI Intelligence & Reporting Services**
+
+This group focuses on the advanced features that provide actionable insights, including the AI Assistant and the formal Report Center. It is designed with a strong emphasis on resilience, cost control, and maintainability.
+
+#### `[Frontend]` AI Assistant Module
+
+-   **Responsibility**: Provides the dedicated user interface for Faculty and Department Heads to generate AI-powered suggestions. This module is responsible for rendering the necessary filters, displaying the predefined action buttons, and initiating the asynchronous generation process. It then monitors the job's progress via the WebSocket connection and displays the final results, along with options to save or export. [cite_start]It must also gracefully handle error states, such as when the service is temporarily unavailable. [cite: 1472]
+-   **Key Interfaces**: A page at `/ai-assistant` that orchestrates filter components, action buttons, and a results display area. [cite_start]It includes a "History" tab for viewing saved suggestions. [cite: 1435]
+-   **Dependencies**: `AI Suggestion Service [Backend]`, `Job Monitor Module [Frontend]`, `shadcn/ui` components.
+-   **Technology Stack**: React, TypeScript, TanStack Query, `shadcn/ui` (Select, Button, Card, Tabs).
+
+---
+
+#### `[Frontend]` Report Center Module
+
+-   [cite_start]**Responsibility**: Implements the UI for the formal "Report Center," featuring a two-tab layout for "Generate Report" and "My Reports." [cite: 1445] It allows users to select a report type, apply filters, and initiate an asynchronous generation job. [cite_start]The "My Reports" tab acts as a real-time inbox, using the WebSocket connection to display the status of pending and completed reports, providing download links when ready. [cite: 1445]
+-   **Key Interfaces**: A page at `/report-center` with a form for report generation and a table for tracking report history and status.
+-   **Dependencies**: `Report Generation Service [Backend]`, `Job Monitor Module [Frontend]`, `shadcn/ui` components.
+-   **Technology Stack**: React, TypeScript, TanStack Query, `shadcn/ui` (Tabs, Select, Button, Table).
+
+---
+
+#### `[Backend]` AI Suggestion Service
+
+-   **Responsibility**: Acts as a secure gateway for initiating AI suggestions. Its sole responsibilities are to validate the incoming user request, check it against the **configurable rate limits** defined in `UniversitySetting`, and, if valid, **enqueue an asynchronous job** in Redis. It does **not** call the external Gemini API directly. [cite_start]It is also responsible for all CRUD operations on the `AISuggestion` history table. [cite: 1425]
+-   **Key Interfaces**: API endpoints under `/ai-assistant/*` and `/ai-suggestions/*`.
+-   **Dependencies**: Database (`AISuggestion`, `UniversitySetting` tables), `Redis`, `Authentication Service`.
+-   **Technology Stack**: Python, FastAPI, SQLAlchemy, Pydantic.
+
+---
+
+#### `[Backend]` Report Generation Service
+
+-   **Responsibility**: Manages the lifecycle of formal reports. It exposes an API to validate report requests, checks them against **configurable server-protection limits** (to prevent overloading the server), and **enqueues the appropriate job in Redis**. It also manages the state of the `GeneratedReport` database table and provides secure endpoints for downloading completed files.
+-   **Key Interfaces**: API endpoints under `/reports/*`.
+-   **Dependencies**: Database (`GeneratedReport`, `UniversitySetting` tables), `Redis`, `Authentication Service`, `File Storage`.
+-   **Technology Stack**: Python, FastAPI, SQLAlchemy, Pydantic.
+
+---
+
+#### `[Worker]` AI Suggestion Job Handler
+
+-   **Responsibility**: An asynchronous task that performs the actual AI suggestion generation. It is consumed from the Redis job queue and is responsible for:
+    1.  Fetching the necessary processed evaluation data.
+    2.  Constructing a detailed prompt by reading from an **externalized prompt template file** (e.g., `prompts.json`).
+    3.  Making the external API call to the Gemini API, wrapped in a **Circuit Breaker** to handle external service failures gracefully.
+    4.  Saving the generated result to the `AISuggestion` table.
+    5.  A **mocking layer** for the external Gemini API call is a mandatory requirement for all non-production environments to enable cost-effective and reliable testing.
+-   **Key Interfaces**: A Python function consumed from the Redis job queue.
+-   **Dependencies**: Database (`AISuggestion` table), External Gemini API.
+-   **Technology Stack**: Python, RQ, SQLAlchemy, `requests`, `httpx`.
+
+---
+
+#### `[Worker]` Report Generation Job Handlers
+
+-   **Responsibility**: A collection of asynchronous tasks that execute the file generation logic. These handlers are consumed from the Redis job queue. [cite_start]Each handler fetches the required data, uses the appropriate library (**WeasyPrint for PDF**, **Pandas for CSV/Excel**) to create the file, saves the final artifact to the `File Storage` volume, and updates the corresponding `GeneratedReport` record in the database with a `Ready` status and the file's storage path. [cite: 1301]
+-   **Key Interfaces**: Python functions consumed from the Redis job queue.
+-   **Dependencies**: Database, `File Storage`.
+-   **Technology Stack**: Python, RQ, SQLAlchemy, WeasyPrint, Pandas.
