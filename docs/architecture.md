@@ -800,7 +800,8 @@ This section defines the complete relational data schema for the application. Th
     -   `evaluatee_id`: Foreign key to the `User` being evaluated.
     -   `subject_offering_id`: Foreign key to the specific `SubjectOffering` (class) this evaluation is for.
     -   `status`: The lifecycle status of the submission (`submitted`, `processing`, `processed`, `archived`, `invalidated_for_resubmission`, `cancelled`).
-    -   **`integrity_check_status`**: **(New)** Tracks the state of asynchronous integrity checks (`pending`, `completed`, `failed`).
+    -   `integrity_check_status`: Tracks the state of asynchronous integrity checks (`pending`, `completed`, `failed`).
+    -   `analysis_status`: Tracks the state of the data analysis pipeline (`pending`, `quant_qual_complete`, `aggregation_complete`, `failed`).
     -   `submitted_at`: The timestamp when the user submitted the form.
     -   `is_resubmission`: A boolean flag indicating if this is a new submission for a previously flagged evaluation.
     -   `original_submission_id`: A nullable, self-referencing foreign key linking a resubmission back to the original `EvaluationSubmission` that was invalidated.
@@ -821,7 +822,12 @@ This section defines the complete relational data schema for the application. Th
             | "archived"
             | "invalidated_for_resubmission"
             | "cancelled";
-        integrityCheckStatus: "pending" | "completed" | "failed"; // New field
+        integrityCheckStatus: "pending" | "completed" | "failed";
+        analysisStatus:
+            | "pending"
+            | "quant_qual_complete"
+            | "aggregation_complete"
+            | "failed";
         submittedAt: Date;
         isResubmission: boolean;
         originalSubmissionId?: number;
@@ -1937,6 +1943,20 @@ paths:
                     description: "Period restored successfully."
                 "410":
                     description: "Gone. The restoration grace period has expired."
+    /admin/evaluation-periods/{periodId}/re-aggregate:
+        post:
+            summary: "[Admin] Re-run Final Aggregation for a Period"
+            description: "Enqueues the Final Aggregation Job for all processed submissions within a given historical evaluation period. This is a powerful administrative tool for recalculating scores after a logic change or data correction."
+            tags: ["Admin"]
+            parameters:
+                - name: periodId
+                  in: path
+                  required: true
+                  schema:
+                      type: integer
+            responses:
+                "202":
+                    description: "Re-aggregation job has been successfully accepted and queued for all relevant submissions."
     /admin/registration-codes:
         get:
             summary: "List Registration Codes"
@@ -2981,10 +3001,28 @@ This group covers the entire pipeline, from the raw data processing jobs to the 
 
 #### `[Backend]` Dashboard Data Service
 
--   **Responsibility**: Exposes the API endpoints required to populate all dashboards with **aggregated and calculated data**. It implements the hybrid data retrieval strategy: for finalized periods, it fetches pre-calculated data from aggregate tables; for active, provisional periods, it calculates results on-the-fly and caches them in Redis to ensure performance. This service **does not** handle raw comment data.
+-   **Responsibility**: (Refactored) Exposes the API endpoints required to populate all dashboards. Its responsibility is now significantly simplified: it **efficiently reads from pre-calculated aggregate tables**—either the provisional aggregate table (for active periods) or the final snapshot tables (for closed periods). It no longer performs on-the-fly calculations or caching.
 -   **Key Interfaces**: A `GET /dashboard` endpoint that accepts various filters (term, period, view_mode) and returns a complex JSON object structured for the frontend dashboards.
--   **Dependencies**: Database (aggregate and raw data tables), `Redis` (for caching provisional data), `Authentication Service`.
--   **Technology Stack**: Python, FastAPI, SQLAlchemy, Pydantic, Redis.
+-   **Dependencies**: Database (aggregate tables), `Authentication Service`.
+-   **Technology Stack**: Python, FastAPI, SQLAlchemy, Pydantic.
+
+---
+
+#### **`[Worker]` Provisional Data Micro-batching Job (New Component)**
+
+-   **Responsibility**: A scheduled worker that runs every few minutes (e.g., 5 minutes). Its sole purpose is to calculate aggregates for any _new_, successfully processed submissions that have arrived since its last run. It populates a dedicated `provisional_aggregates` table in the database, ensuring that the dashboard API has fast, pre-calculated data to read.
+-   **Key Interfaces**: This component is triggered by a system scheduler (e.g., cron), not by a direct API call.
+-   **Dependencies**: Database.
+-   **Technology Stack**: Python, RQ, SQLAlchemy.
+
+---
+
+#### **`[Worker]` Analysis Pipeline Cleanup Task (New Component)**
+
+-   **Responsibility**: A scheduled worker that runs periodically to ensure the self-healing of the analysis pipeline. It searches for submissions that have been stuck in an intermediate `analysis_status` (e.g., `quant_qual_complete`) for too long and automatically re-enqueues the appropriate failed job (e.g., the `Final Aggregation Job`).
+-   **Key Interfaces**: This component is triggered by a system scheduler.
+-   **Dependencies**: Database, Redis (to re-enqueue jobs).
+-   **Technology Stack**: Python, RQ, SQLAlchemy.
 
 ---
 
@@ -3003,6 +3041,9 @@ This group covers the entire pipeline, from the raw data processing jobs to the 
 -   **Key Interfaces**: A Python function consumed from the Redis job queue, managed by the `Analysis Orchestrator`.
 -   **Dependencies**: Database.
 -   **Technology Stack**: Python, RQ, SQLAlchemy, NumPy/SciPy (for statistical calculations).
+-   **Critical Requirements**:
+    -   All jobs **must be idempotent** to allow for safe, automatic retries.
+    -   The **`Final Aggregation Job`** must include **defensive logic to handle small cohort sizes** (e.g., n \< 2) to prevent division-by-zero errors during Z-score calculation.
 
 ---
 
@@ -3012,6 +3053,9 @@ This group covers the entire pipeline, from the raw data processing jobs to the 
 -   **Key Interfaces**: A Python function consumed from the Redis job queue, managed by the `Analysis Orchestrator`.
 -   **Dependencies**: Database, local AI models (Transformers, PyTorch, KeyBERT).
 -   **Technology Stack**: Python, RQ, SQLAlchemy, Transformers, PyTorch.
+-   **Critical Requirements**:
+    -   All jobs **must be idempotent** to allow for safe, automatic retries.
+    -   The **`Final Aggregation Job`** must include **defensive logic to handle small cohort sizes** (e.g., n \< 2) to prevent division-by-zero errors during Z-score calculation.
 
 ---
 
@@ -3021,6 +3065,9 @@ This group covers the entire pipeline, from the raw data processing jobs to the 
 -   **Key Interfaces**: A Python function consumed from the Redis job queue, triggered by the `Analysis Orchestrator`.
 -   **Dependencies**: Database (`UniversitySetting`, `NumericalAggregate`, `SentimentAggregate` tables).
 -   **Technology Stack**: Python, RQ, SQLAlchemy, NumPy/SciPy.
+-   **Critical Requirements**:
+    -   All jobs **must be idempotent** to allow for safe, automatic retries.
+    -   The **`Final Aggregation Job`** must include **defensive logic to handle small cohort sizes** (e.g., n \< 2) to prevent division-by-zero errors during Z-score calculation.
 
 ---
 

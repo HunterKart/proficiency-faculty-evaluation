@@ -22,6 +22,7 @@ Existing faculty evaluation systems, particularly within the Philippines and at 
 
 | Date           | Version | Description                                                                                                                                                          | Author       |
 | :------------- | :------ | :------------------------------------------------------------------------------------------------------------------------------------------------------------------- | :----------- |
+| **2025-10-08** | **7.6** | **Refined FR8 to specify data latency (e.g., 5 mins) due to micro-batching architecture. Added FR17 for an admin API to re-aggregate historical data.**              | **John, PM** |
 | **2025-10-08** | **7.5** | **Refined NFR11 to explicitly require that integrity check thresholds (e.g., similarity percentage) must be configurable per university, per architectural review.** | **John, PM** |
 | **2025-10-08** | **7.4** | **Added NFR13 to mandate detailed audit logging for all administrative actions on forms and periods, per architectural review.**                                     | **John, PM** |
 | **2025-10-07** | **7.3** | **Added FR16 to mandate a 24-hour expiration on new user verification links per architectural review to enhance security.**                                          | **John, PM** |
@@ -82,9 +83,7 @@ Existing faculty evaluation systems, particularly within the Philippines and at 
     -   The system shall present data using specific visualizations: **Word Clouds, Bar Charts, and Performance Trend Line Charts**. Admins will also have access to an **Evaluation Submission Behavior Line Chart**.
     -   Department Heads and Admins must be able to switch between different data views or **"modes"** (e.g., department-wide, specific faculty results).
 -   **FR8: Provisional and Finalized Reporting Workflow**
-    -   All reports for an active review period shall be marked as **"Provisional."**.
-    -   When an Admin approves a flagged evaluation, an asynchronous job must **recalculate the provisional aggregates** for the affected parties.
-    -   Admins shall have a function to **"Finalize and Lock Period,"** which runs a final aggregation and sets the `is_final_snapshot` flag to `true`.
+    -   All reports for an active review period shall be marked as **"Provisional."**. When an Admin approves a flagged evaluation, an asynchronous job must **recalculate the provisional aggregates** for the affected parties. Admins shall have a function to **"Finalize and Lock Period,"** which runs a final aggregation and sets the `is_final_snapshot` flag to `true`. To ensure high performance and scalability for all users, data on provisional dashboards is updated via a near real-time process. As such, the displayed aggregates **may be up to 5 minutes out of date** and may not instantly reflect the most recent submissions.
 -   **FR9: Historical Data Import**
     -   Admins shall have the ability to bulk import historical university data via CSV/Excel to prime the system.
     -   The import process must support: **Academic Structure** (departments, programs, subjects), **User & Enrollment Records**, and **Past Evaluation Submissions** (including Likert and open-ended answers).
@@ -96,6 +95,7 @@ Existing faculty evaluation systems, particularly within the Philippines and at 
 -   **FR14: Proactive Period Setup Notification**: The system shall generate a notification for Admins when an evaluation period concludes, prompting them to schedule the next logical period and providing a one-click action to begin the duplication process.
 -   **FR15: In-Use Resource Protection**: The system must prevent the archival or deletion of any resource (e.g., Form Template) that is currently assigned to an active or scheduled Evaluation Period. An attempt to do so must result in a clear error message explaining the dependency.
 -   **FR16: Secure Account Verification**: To enhance security, account verification links sent to new users must automatically expire 24 hours after they are issued.
+-   **FR17: Administrative Re-aggregation**: The system must provide a secure, admin-only API endpoint to trigger a full recalculation of all final, normalized scores for a given historical evaluation period. This enables reprocessing of data if scoring logic or configuration (like score weighting) is updated. A UI for this feature is not required for V1.
 
 #### **Non-Functional Requirements**
 
