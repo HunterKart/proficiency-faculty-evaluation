@@ -203,7 +203,11 @@ This section defines the complete relational data schema for the application. Th
 -   **Key Attributes**:
     -   `id`: Primary key.
     -   `name`: The official name of the university.
-    -   `address`: The physical address of the institution.
+    -   `address`: The physical address of the institution. However, this is more broken down (in the database but in application it is condensed into one attribute) into:
+        -   `postal_code`
+        -   `street`
+        -   `city`
+        -   `country`
     -   `status`: The current state of the university's account (e.g., `pending`, `active`, `inactive`).
     -   `created_at` / `updated_at`: Timestamps for record management.
 -   **TypeScript Interface**:
@@ -211,7 +215,7 @@ This section defines the complete relational data schema for the application. Th
     interface University {
         id: number;
         name: string;
-        address: string;
+        address: string; //derived from four attributes-> street, city, country, and postal code
         status: "pending" | "active" | "inactive";
         createdAt: Date;
         updatedAt: Date;
@@ -233,6 +237,7 @@ This section defines the complete relational data schema for the application. Th
     -   `status`: The current stage of the application (`submitted`, `in_review`, `approved`, `rejected`).
     -   `rejection_reason`: A text field to store the reason for a rejection, if applicable.
     -   **`details`**: **(New)** A flexible `JSON` field to store additional, non-critical registration metadata for future extensibility without requiring schema changes.
+    -   `created_at` / `updated_at`: Timestamps for record management.
 -   **TypeScript Interface**:
     ```typescript
     interface UniversityRegistrationRequest {
@@ -261,6 +266,7 @@ This section defines the complete relational data schema for the application. Th
     -   `storage_path`: The path to the file on the server's file system.
     -   `mime_type`: The MIME type of the file (e.g., 'application/pdf').
     -   `file_size`: The size of the file in bytes.
+    -   `created_at`: Timestamps for record management.
 -   **TypeScript Interface**:
     ```typescript
     interface Document {
@@ -270,6 +276,7 @@ This section defines the complete relational data schema for the application. Th
         storagePath: string;
         mimeType: string;
         fileSize: number;
+        createdAt: Date;
     }
     ```
 -   **Relationships**:
@@ -298,7 +305,27 @@ This section defines the complete relational data schema for the application. Th
     ```
 
 -   **Relationships**:
-    -   Has a many-to-many relationship with `User`.
+    -   Has a many-to-many relationship with `User` through the `UserRole` junction table/entity.
+
+### **UserRole**
+
+-   **Purpose**: A junction table that properly links/assigns roles to users (`User`) to available roles within the system (`Role`).
+-   **Key Attributes**:
+    -   `user_id`: Foreign key linking to a `User`; considered primary key (composite with `role_id`).
+    -   `role_id`: Foreign key linking to a `Role`; considered primary key (composite with `user_id`).
+    -   `created_at` / `updated_at`: Timestamps for record management.
+-   **Typescript Interface**:
+    ```typescript
+    interface User {
+        userId: number;
+        roleId: number;
+        createdAt: Date;
+        updatedAt: Date;
+    }
+    ```
+-   **Relationships**:
+    -   Belongs to one `User`.
+    -   Belongs to one `Role`.
 
 ### **User**
 
@@ -324,6 +351,7 @@ This section defines the complete relational data schema for the application. Th
         firstName: string;
         lastName: string;
         email: string;
+        passwordHash: string;
         status: "active" | "inactive" | "unverified";
         programId?: number; // Primarily for students
         registrationCodeId?: number;
@@ -349,15 +377,18 @@ This section defines the complete relational data schema for the application. Th
     -   `pin_hash`: A securely hashed 6-digit PIN for multi-factor authentication.
     -   `status`: The account's status (e.g., `active`, `locked`).
     -   `tokenVersion`: An integer, defaulting to 1, that is incremented upon password change or "log out all sessions" action to invalidate old JWTs.
-    -   `created_at`: Timestamp for when the super admin was created.
+    -   `created_at` / `updated_at`: Timestamps for when the super admin was created/updated.
 -   **TypeScript Interface**:
     ```typescript
     interface SuperAdmin {
         id: number;
         email: string;
+        passwordHash: string;
+        pinHash: string;
         status: "active" | "locked";
         tokenVersion: number; // This version number must be included as a claim in the JWT.
         createdAt: Date;
+        updatedAt: Date;
     }
     ```
 -   **Relationships**:
@@ -375,6 +406,7 @@ This section defines the complete relational data schema for the application. Th
     -   `current_uses`: A counter for how many times the code has been used.
     -   `status`: The code's status (`active`, `inactive`).
     -   `expires_at`: An optional expiration timestamp for the code.
+    -   `created_at`: Timestamps for when the registration code was created.
 -   **TypeScript Interface**:
     ```typescript
     interface RegistrationCode {
@@ -386,6 +418,7 @@ This section defines the complete relational data schema for the application. Th
         currentUses: number;
         status: "active" | "inactive";
         expiresAt?: Date;
+        createdAt: Date;
     }
     ```
 -   **Relationships**:
