@@ -249,6 +249,7 @@ This section defines the complete relational data schema for the application. Th
         status: "submitted" | "in_review" | "approved" | "rejected";
         rejectionReason?: string;
         details?: Record<string, any>; // For future flexibility
+        universityId?: number;
         createdAt: Date;
         updatedAt: Date;
     }
