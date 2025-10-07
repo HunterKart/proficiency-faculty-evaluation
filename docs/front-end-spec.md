@@ -32,6 +32,7 @@ The interface must feel clean, trustworthy, and represent a significant upgrade 
 
 | Date       | Version | Description                                                                                                                                                                                                       | Author           |
 | :--------- | :------ | :---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | :--------------- |
+| 2025-10-08 | 3.5     | Added UI/UX for handling the `413 Payload Too Large` error in the Report Center, guiding users to refine overly broad report requests.                                                                            | Sally, UX Expert |
 | 2025-10-08 | 3.4     | Added UI/UX pattern for handling `409 Conflict` errors to gracefully manage concurrent administrative edits, ensuring a clear user recovery path.                                                                 | Sally, UX Expert |
 | 2025-10-07 | 3.3     | Added UI/UX specifications for WebSocket disconnection and reconnection handling in the Job Monitor flow to ensure a resilient user experience.                                                                   | Sally, UX Expert |
 | 2025-10-07 | 3.2     | Added error handling UI/UX for expired account verification links to the onboarding flow, ensuring a clear recovery path for the user.                                                                            | Sally, UX Expert |
@@ -490,6 +491,7 @@ flowchart TD
 -   **User Goal:** To generate and download a standardized, official report of evaluation results for a specific period, suitable for archiving or formal meetings.
 -   **Entry Points:** The user (Admin, Department Head, or Faculty) clicks the "Report Center" link in the main sidebar navigation.
 -   **Success Criteria:** The user successfully downloads a professionally formatted PDF or a structured CSV/Excel file based on their selected parameters via a "Report Center" system.
+-   **Error Handling:** If the report request is too large, the user is clearly informed and guided to refine their request.
 
 **Flow Diagram:**
 
@@ -505,7 +507,12 @@ flowchart TD
     E --> G["User selects export format<br>(PDF or CSV/Excel)"];
     G --> H{User clicks 'Generate Report'};
 
-    H --> H_Async[Enqueue asynchronous job<br>Redirect to 'My Reports' tab];
+    H --> API_Call[API Call: POST /api/reports with filters];
+    API_Call --> Response{API Response?};
+
+    Response -- "202 Accepted" --> H_Async[Enqueue asynchronous job<br>Redirect to 'My Reports' tab];
+    Response -- "413 Payload Too Large" --> Error_413[Display Error Toast];
+    Error_413 --> E;
 
     subgraph MyReportsTab [My Reports Tab]
         H_Async --> M[New job appears at top of list<br>Status: 'Queued', with ETA];
@@ -523,6 +530,7 @@ flowchart TD
 
 -   **Distinction is Key:** The "Generate Report" tab is for creating **standardized reports**. It is functionally separate from the "Export this View" feature on the **Explore Data** tab, which is for ad-hoc data snapshots.
 -   **Asynchronous Process:** To provide a consistent and non-blocking user experience, all report generation is managed through the asynchronous "My Reports" inbox system. This allows users to continue working while large reports are generated in the background, providing them with clear status updates, ETAs, and control.
+-   **Request Size Error Handling:** When the frontend receives a `413 Payload Too Large` error, it **must** display a clear and helpful error message (e.g., using `shadcn/ui` `<Toast>`). The message should inform the user that their request is too large and instruct them to apply more specific filters (e.g., "**This report is too large to generate. Please select a smaller date range or a specific department.**"). After the error is displayed, the UI state should return to allow the user to modify their filters, and the "Generate Report" button must be re-enabled.
 -   **Backend Libraries:** The backend will use **WeasyPrint** for PDF generation and **pandas** for CSV/Excel file creation.
 
 #### **Flow: Managerial & Administrative Review**

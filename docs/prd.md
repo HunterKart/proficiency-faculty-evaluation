@@ -22,6 +22,7 @@ Existing faculty evaluation systems, particularly within the Philippines and at 
 
 | Date           | Version | Description                                                                                                                                                          | Author       |
 | :------------- | :------ | :------------------------------------------------------------------------------------------------------------------------------------------------------------------- | :----------- |
+| **2025-10-08** | **7.7** | **Added FR18 to require a pre-computation check and size limit for report generation to protect system stability, per architectural review.**                        | **John, PM** |
 | **2025-10-08** | **7.6** | **Refined FR8 to specify data latency (e.g., 5 mins) due to micro-batching architecture. Added FR17 for an admin API to re-aggregate historical data.**              | **John, PM** |
 | **2025-10-08** | **7.5** | **Refined NFR11 to explicitly require that integrity check thresholds (e.g., similarity percentage) must be configurable per university, per architectural review.** | **John, PM** |
 | **2025-10-08** | **7.4** | **Added NFR13 to mandate detailed audit logging for all administrative actions on forms and periods, per architectural review.**                                     | **John, PM** |
@@ -96,6 +97,7 @@ Existing faculty evaluation systems, particularly within the Philippines and at 
 -   **FR15: In-Use Resource Protection**: The system must prevent the archival or deletion of any resource (e.g., Form Template) that is currently assigned to an active or scheduled Evaluation Period. An attempt to do so must result in a clear error message explaining the dependency.
 -   **FR16: Secure Account Verification**: To enhance security, account verification links sent to new users must automatically expire 24 hours after they are issued.
 -   **FR17: Administrative Re-aggregation**: The system must provide a secure, admin-only API endpoint to trigger a full recalculation of all final, normalized scores for a given historical evaluation period. This enables reprocessing of data if scoring logic or configuration (like score weighting) is updated. A UI for this feature is not required for V1.
+-   **FR18: Report Generation Limits**: To ensure system stability, the generation of reports is subject to a size limit. If a user's filter criteria would result in a report exceeding a configurable number of records, the request must be rejected, and the user must be prompted to narrow their search or apply more specific filters.
 
 #### **Non-Functional Requirements**
 
