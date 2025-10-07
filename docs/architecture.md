@@ -992,13 +992,14 @@ The model is updated to make the calculation of the resubmission grace period an
 -   **Key Attributes**:
     -   `id`: Primary key.
     -   `submission_id`: A one-to-one foreign key to the `EvaluationSubmission`.
+    -   `per_question_median_scores`: A JSON field storing the calculated median score for each individual Likert-scale question in the submission; pertaining towards a single faculty through the submission.
+    -   `per_criterion_average_scores`: **Modified** A JSON field storing calculated average score for each criterion, derived from the question medians (e.g., `{"criterion_id_1": 4.5, "criterion_id_2": 4.8}`)
     -   `quant_score_raw`: The initial weighted mean score calculated from Likert answers.
     -   `z_quant`: The normalized Z-score for the quantitative part, representing performance relative to the cohort.
     -   `final_score_60_40`: The final combined score, weighted 60% quantitative and 40% qualitative.
     -   `cohort_n`: The size (count) of the comparison group used for normalization.
     -   `cohort_mean`: The mean score (μ) of the cohort.
     -   `cohort_std_dev`: The standard deviation (σ) of the cohort.
-    -   `per_criterion_scores`: A JSON field to store the calculated mean score for each criterion in the submission.
     -   `is_final_snapshot`: A boolean flag that is set to `true` when the evaluation period is locked, preventing further updates.
     -   `created_at` / `updated_at`: Timestamps.
 -   **TypeScript Interface**:
@@ -1006,13 +1007,14 @@ The model is updated to make the calculation of the resubmission grace period an
     interface NumericalAggregate {
         id: number;
         submissionId: number;
+        perQuestionMedianScores: Record<string, number>; // e.g., { "123": 4.0, "124": 5.0 }
+        perCriterionAverageScores: Record<string, number>; // e.g., { "10": 4.5, "11": 4.8 }
         quantScoreRaw: number;
         zQuant: number;
         finalScore6040: number;
         cohortN: number;
         cohortMean: number;
         cohortStdDev: number;
-        perCriterionScores: Record<string, number>;
         isFinalSnapshot: boolean;
         createdAt: Date;
         updatedAt: Date;
@@ -1086,6 +1088,9 @@ The model is updated to make the calculation of the resubmission grace period an
 -   **Key Attributes**:
     -   `id`: Primary key.
     -   `submission_id`: A one-to-one foreign key to the `EvaluationSubmission`.
+    -   `average_positive_score`: The average "positive" sentiment score across all open-ended answers in the submission.
+    -   `average_neutral_score`: The average "neutral" sentiment score.
+    -   `average_negative_score`: The average "negative" sentiment score.
     -   `qual_score_raw`: The raw qualitative score for the entire submission. This will be derived by averaging the sentiment scores across all associated `OpenEndedSentiment` records.
     -   `z_qual`: The normalized Z-score for the qualitative part, representing sentiment relative to the cohort.
     -   **`is_final_snapshot`**: **(New)** A boolean flag that is set to true when the evaluation period is locked.
@@ -1095,6 +1100,9 @@ The model is updated to make the calculation of the resubmission grace period an
     interface SentimentAggregate {
         id: number;
         submissionId: number;
+        averagePositiveScore: number;
+        averageNeutralScore: number;
+        averageNegativeScore: number;
         qualScoreRaw: number;
         zQual: number;
         isFinalSnapshot: boolean;
