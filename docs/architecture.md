@@ -1149,13 +1149,14 @@ The model is updated to make the calculation of the resubmission grace period an
 -   **Key Attributes**:
     -   `id`: Primary key.
     -   `university_id`: Foreign key for multi-tenancy.
-    -   **`job_type`**: **(Expanded)** An identifier for the type of job.
+    -   `job_type`: An identifier for the type of job.
     -   `status`: The job's lifecycle status (`queued`, `processing`, `cancellation_requested`, `completed_success`, `completed_partial_failure`, `failed`, `cancelled`).
     -   `submitted_by_user_id`: Foreign key to the `User` who initiated the job.
     -   `job_parameters`: A JSON field to store the input parameters for the job.
     -   `progress`: An integer from 0-100 to show the progress of long-running tasks.
     -   `result_message`: A text field for a summary of the success or error outcome.
     -   `result_storage_path`: A nullable path to any output file, such as an error report.
+    -   **`log_output`**: **(New)** A `TEXT` field to store the detailed technical exception traceback or the last N lines of log output if the job fails, providing critical diagnostic information for support and debugging.
     -   `created_at` / `started_at` / `completed_at`: Timestamps to track the job's lifecycle.
     -   `rows_total`: A nullable integer for the total number of data rows in an imported file.
     -   `rows_processed`: A nullable integer for the number of rows successfully imported.
@@ -1189,10 +1190,10 @@ The model is updated to make the calculation of the resubmission grace period an
         progress: number;
         resultMessage?: string;
         resultStoragePath?: string;
+        logOutput?: string; // New field for diagnostics
         createdAt: Date;
         startedAt?: Date;
         completedAt?: Date;
-        // Optional fields for import job metadata
         rowsTotal?: number;
         rowsProcessed?: number;
         rowsFailed?: number;
@@ -2775,8 +2776,8 @@ This group encompasses all components required for University Admins to build ou
 
 #### **`[Frontend]` Job Monitor Module**
 
--   **Responsibility**: A centralized dashboard that provides Admins with a **real-time view** of all background jobs, replacing the static "Import History" page. It must display job status (including **`Completed_Partial_Failure`**), progress, and provide actions to manage jobs, such as `Cancel`, `Download Error Report`, and `Force Fail`.
--   **Key Interfaces**: A page at `/admin/job-monitor` that establishes a WebSocket connection to receive live updates. It will primarily feature a table of all background jobs.
+-   **Responsibility**: A centralized dashboard that provides Admins with a real-time view of all background jobs. It **must implement a resilient WebSocket client** with automatic reconnection logic. Upon reconnection, it must re-fetch the latest job state via a REST call to prevent displaying stale data. It displays job status (including `Completed_Partial_Failure`), progress, and provides actions to manage jobs, such as `Cancel`, `Download Error Report`, and `Force Fail`.
+-   **Key Interfaces**: A page at `/admin/job-monitor` that establishes and maintains a WebSocket connection. It primarily features a table of all background jobs.
 -   **Dependencies**: `Job Monitoring Service [Backend]` (via WebSockets for real-time updates and a REST API for initial data load and performing actions).
 -   **Technology Stack**: React, TypeScript, `shadcn/ui` (Table, Button, Progress Bar, AlertDialog), native WebSocket API.
 
@@ -2802,7 +2803,7 @@ This group encompasses all components required for University Admins to build ou
 
 #### **`[Backend]` Job Monitoring Service**
 
--   **Responsibility**: Acts as the single source of truth for the state of all background jobs. It manages the `BackgroundTask` database table, provides REST endpoints for listing jobs and initiating management actions (`cancel`, `force-fail`), and **broadcasts** status and progress updates over the WebSocket channel to subscribed clients. It must support the `completed_partial_failure` status.
+-   **Responsibility**: Acts as the single source of truth for the state of all background jobs. It manages the `BackgroundTask` database table, provides REST endpoints for listing jobs and initiating management actions, and broadcasts status updates over the WebSocket channel. The "Force Fail" action **must be implemented as an atomic, transactional operation** to prevent race conditions.
 -   **Key Interfaces**: REST API endpoints under `/admin/job-monitor/*` and the WebSocket endpoint at `/ws/job-progress/{jobId}`.
 -   **Dependencies**: Database (`BackgroundTask` table), `Redis` (to query the state of RQ jobs), WebSocket Manager.
 -   **Technology Stack**: Python, FastAPI, SQLAlchemy, Pydantic, `websockets`.
@@ -2811,10 +2812,17 @@ This group encompasses all components required for University Admins to build ou
 
 #### **`[Worker]` Data Import Job Handlers**
 
--   **Responsibility**: A collection of distinct, asynchronous tasks that execute the data import logic. All import jobs **must process data in transactional batches**. The job's progress must be updated after each successful batch. If a batch fails, the job should continue to the next batch and finish with a **`completed_partial_failure`** status, generating an error report containing only the rows from failed batches.
--   **Key Interfaces**: These are Python functions consumed from the Redis job queue; they do not expose any network APIs.
+-   **Responsibility**: A collection of distinct, asynchronous tasks that execute the data import logic. All jobs **must be configured with a definitive timeout** within the RQ framework to prevent "zombie" processes. All import jobs must process data in transactional batches and update progress after each batch. If a batch fails, the job continues and finishes with a `completed_partial_failure` status, generating an error report of only the failed rows. On any unhandled failure, the job **must populate the `log_output` field** in the `BackgroundTask` table with the exception traceback before terminating.
+-   **Key Interfaces**: Python functions consumed from the Redis job queue; they do not expose any network APIs.
 -   **Dependencies**: Database, `Notification Service`.
 -   **Technology Stack**: Python, RQ, SQLAlchemy, Pandas.
+
+#### **`[Worker]` Scheduled Cleanup Task (New Component)**
+
+-   **Responsibility**: A system-level, scheduled task (e.g., cron job) that runs periodically. Its sole purpose is to ensure system self-healing by identifying jobs that have been marked as timed-out by the underlying RQ framework but have not yet been updated in the application's primary `BackgroundTask` database table. It transitions these "zombie" jobs to a final `failed` state.
+-   **Key Interfaces**: This component is triggered by a system scheduler (e.g., cron), not by an API call or a user-initiated job queue.
+-   **Dependencies**: Database (`BackgroundTask` table), Redis (to query RQ's failed/timed-out queues).
+-   **Technology Stack**: Python, RQ, SQLAlchemy.
 
 ---
 

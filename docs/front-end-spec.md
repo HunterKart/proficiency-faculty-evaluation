@@ -32,6 +32,7 @@ The interface must feel clean, trustworthy, and represent a significant upgrade 
 
 | Date       | Version | Description                                                                                                                                                                                                       | Author           |
 | :--------- | :------ | :---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | :--------------- |
+| 2025-10-07 | 3.3     | Added UI/UX specifications for WebSocket disconnection and reconnection handling in the Job Monitor flow to ensure a resilient user experience.                                                                   | Sally, UX Expert |
 | 2025-10-07 | 3.2     | Added error handling UI/UX for expired account verification links to the onboarding flow, ensuring a clear recovery path for the user.                                                                            | Sally, UX Expert |
 | 2025-10-07 | 3.1     | Added error handling for a `503 Service Unavailable` state to the **'Faculty - Generate AI Suggestions'** flow, ensuring a clear user experience when the AI service's circuit breaker is open.                   | Sally, UX Expert |
 | 2025-10-07 | 3.0     | Aligned `CommentViewerDialog` component dependency with the new dedicated `Comment Data Service` as per architect's request.                                                                                      | Sally, UX Expert |
@@ -729,6 +730,11 @@ flowchart TD
     A[Start: Admin navigates to 'Job Monitor'] --> B["UI establishes WebSocket connection<br/>and displays list of background jobs"];
     B --> C["Table shows: Job Type, Status Icon,<br/>Progress Bar, Submitted At, Actions"];
 
+    subgraph "Connection Status UI"
+        Conn_Indicator["UI displays persistent<br/>Connection Status Indicator"];
+        B -- "On connection" --> Conn_Indicator;
+    end
+
     subgraph "Real-time Updates via WebSocket"
         WebSocket["WebSocket Server"] -- "Pushes status & progress" --> B;
     end
@@ -757,6 +763,10 @@ flowchart TD
 **Technical & Developer Notes:**
 
 -   **Real-time Progress:** The UI **must** use a WebSocket connection to receive real-time progress updates (e.g., `progress`, `rows_processed`) and status changes for all active jobs. This replaces the previous polling mechanism. A progress bar in the table should reflect this data.
+-   **Connection Resiliency & UX**:
+    -   **Visual Status Indicator**: The Job Monitor UI **must** always display a subtle, persistent indicator of the WebSocket connection status (e.g., a small dot in the page header: green for 'connected', yellow for 'reconnecting', red for 'disconnected').
+    -   **Disconnection UX**: When the connection is lost, the UI **must** display a clear, non-intrusive message (e.g., a `shadcn/ui` `<Alert>` stating "Connection lost, attempting to reconnect..."). The progress bar and status for active jobs should remain in their last known state but can be overlaid with a subtle pattern (e.g., a semi-transparent diagonal stripe) to indicate the data is potentially stale. The "Force Fail" and "Request Cancellation" buttons **must** be disabled during the disconnected state.
+    -   **Reconnection UX**: Upon successful reconnection, the alert message **must** be removed, the connection indicator should turn green, and the UI **must** trigger a full data refresh (`TanStack Query` invalidation) to show the current, accurate status of all jobs.
 -   **Cooperative Cancellation:** For jobs in a `processing` state, a "Request Cancellation" button will be available. This action sends a signal for the job to stop gracefully after its current task. The UI **must** display a transitional `cancellation_requested` status while waiting for the job to confirm stoppage.
 -   **Streamlined Error Reporting:** For any job with a status of `failed` or `completed_partial_failure`, the main job list will now display a direct "Download Error Report" button, making the error details immediately accessible without needing to open a details dialog.
 -   **Centralized Monitor:** This page replaces the "Import Job History" page and must be the single source of truth for monitoring all `RQ` jobs.
