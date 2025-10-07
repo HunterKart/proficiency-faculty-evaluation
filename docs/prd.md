@@ -24,6 +24,7 @@ Existing faculty evaluation systems, particularly within the Philippines and at 
 
 | Date       | Version | Description                                                                                                                                    | Author   |
 | :--------- | :------ | :--------------------------------------------------------------------------------------------------------------------------------------------- | :------- |
+| 2025-10-07 | 6.7     | Added NFR10 for Transactional Integrity to ensure critical business processes are atomic.                                                      | John, PM |
 | 2025-10-07 | 6.6     | Added Story 1.7 for Super Admin user account management and renumbered backup story to 1.8.                                                    | John, PM |
 | 2025-10-07 | 6.5     | Added FR15 to prevent deletion of in-use resources. Refactored Period Cancellation (Story 3.6, 3.8) to a 72-hour restorable soft cancellation. | John, PM |
 | 2025-10-06 | 6.4     | Aligned Story 1.5 with architectural safety measures regarding data file validation during university approval.                                | John, PM |
@@ -100,6 +101,7 @@ Existing faculty evaluation systems, particularly within the Philippines and at 
 -   **NFR7: Data Privacy Compliance:** All processing of imported historical and live user data must be compliant with the Data Privacy Act of 2012 (RA 10173). The architecture must account for the secure handling and storage of Personally Identifiable Information (PII).
 -   **NFR8: Timezone Standardization:** The entire platform shall operate on a single, standardized timezone: **Philippine Standard Time (PST / Asia/Manila)**. All times displayed in the UI must be explicitly labeled as PST to prevent ambiguity.
 -   **NFR9: Concurrency Control:** To ensure data integrity in a multi-admin environment, the system must implement **Optimistic Locking** for all shared, editable resources (e.g., Form Templates). Concurrent actions (e.g., two admins resolving the same item) must be handled gracefully on the backend on a "first-come, first-served" basis.
+-   **NFR10: Transactional Integrity:** All critical, multi-step business processes that modify the database, such as university onboarding or evaluation period cancellation, must be executed as atomic transactions to prevent the system from entering an inconsistent state upon partial failure.
 
 ---
 
