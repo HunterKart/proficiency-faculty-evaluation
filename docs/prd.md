@@ -24,6 +24,7 @@ Existing faculty evaluation systems, particularly within the Philippines and at 
 
 | Date       | Version | Description                                                                                                                                    | Author   |
 | :--------- | :------ | :--------------------------------------------------------------------------------------------------------------------------------------------- | :------- |
+| 2025-10-07 | 7.0     | Added NFR11 for modular design of the data integrity engine to ensure future extensibility.                                                    | John, PM |
 | 2025-10-07 | 6.9     | Added auto-save functionality as an acceptance criterion for the form builder (Story 3.3) to prevent data loss during edits.                   | John, PM |
 | 2025-10-07 | 6.8     | Added `Completed_Partial_Failure` status for bulk imports and defined partial failure report behavior to improve data import resilience.       | John, PM |
 | 2025-10-07 | 6.7     | Added NFR10 for Transactional Integrity to ensure critical business processes are atomic.                                                      | John, PM |
@@ -104,6 +105,7 @@ Existing faculty evaluation systems, particularly within the Philippines and at 
 -   **NFR8: Timezone Standardization:** The entire platform shall operate on a single, standardized timezone: **Philippine Standard Time (PST / Asia/Manila)**. All times displayed in the UI must be explicitly labeled as PST to prevent ambiguity.
 -   **NFR9: Concurrency Control:** To ensure data integrity in a multi-admin environment, the system must implement **Optimistic Locking** for all shared, editable resources (e.g., Form Templates). Concurrent actions (e.g., two admins resolving the same item) must be handled gracefully on the backend on a "first-come, first-served" basis.
 -   **NFR10: Transactional Integrity:** All critical, multi-step business processes that modify the database, such as university onboarding or evaluation period cancellation, must be executed as atomic transactions to prevent the system from entering an inconsistent state upon partial failure.
+-   **NFR11: Extensibility of Integrity Engine:** The automated flagging algorithms for data integrity must be designed to be modular. The specific thresholds (e.g., similarity percentage) must be configurable, and the core logic (e.g., the similarity checking method) should be swappable to allow for future improvements and tuning without re-architecting the system.
 
 ---
 
