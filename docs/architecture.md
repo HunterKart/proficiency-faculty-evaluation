@@ -237,6 +237,7 @@ This section defines the complete relational data schema for the application. Th
     -   `status`: The current stage of the application (`submitted`, `in_review`, `approved`, `rejected`).
     -   `rejection_reason`: A text field to store the reason for a rejection, if applicable.
     -   **`details`**: **(New)** A flexible `JSON` field to store additional, non-critical registration metadata for future extensibility without requiring schema changes.
+    -   `university_id`: Nullable field linking to `University`. This is for when the university registration is approved, only then it would be filled and Not Null.
     -   `created_at` / `updated_at`: Timestamps for record management.
 -   **TypeScript Interface**:
     ```typescript
