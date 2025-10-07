@@ -20,33 +20,37 @@ Existing faculty evaluation systems, particularly within the Philippines and at 
 
 #### **Change Log**
 
-| Date           | Version | Description                                                                                                                                                          | Author       |
-| :------------- | :------ | :------------------------------------------------------------------------------------------------------------------------------------------------------------------- | :----------- |
-| **2025-10-08** | **7.7** | **Added FR18 to require a pre-computation check and size limit for report generation to protect system stability, per architectural review.**                        | **John, PM** |
-| **2025-10-08** | **7.6** | **Refined FR8 to specify data latency (e.g., 5 mins) due to micro-batching architecture. Added FR17 for an admin API to re-aggregate historical data.**              | **John, PM** |
-| **2025-10-08** | **7.5** | **Refined NFR11 to explicitly require that integrity check thresholds (e.g., similarity percentage) must be configurable per university, per architectural review.** | **John, PM** |
-| **2025-10-08** | **7.4** | **Added NFR13 to mandate detailed audit logging for all administrative actions on forms and periods, per architectural review.**                                     | **John, PM** |
-| **2025-10-07** | **7.3** | **Added FR16 to mandate a 24-hour expiration on new user verification links per architectural review to enhance security.**                                          | **John, PM** |
-| **2025-10-07** | **7.2** | **Added NFR12 to make AI Assistant and Report Generation rate limits configurable as per architectural recommendation for operational control.**                     | **John, PM** |
-| 2025-10-07     | 7.1     | Updated NFR2 to make the 60/40 score weighting a configurable, database-seeded value per architectural recommendation for future flexibility.                        | John, PM     |
-| 2025-10-07     | 7.0     | Added NFR11 for modular design of the data integrity engine to ensure future extensibility.                                                                          | John, PM     |
-| 2025-10-07     | 6.9     | Added auto-save functionality as an acceptance criterion for the form builder (Story 3.3) to prevent data loss during edits.                                         | John, PM     |
-| 2025-10-07     | 6.8     | Added `Completed_Partial_Failure` status for bulk imports and defined partial failure report behavior to improve data import resilience.                             | John, PM     |
-| 2025-10-07     | 6.7     | Added NFR10 for Transactional Integrity to ensure critical business processes are atomic.                                                                            | John, PM     |
-| 2025-10-07     | 6.6     | Added Story 1.7 for Super Admin user account management and renumbered backup story to 1.8.                                                                          | John, PM     |
-| 2025-10-07     | 6.5     | Added FR15 to prevent deletion of in-use resources. Refactored Period Cancellation (Story 3.6, 3.8) to a 72-hour restorable soft cancellation.                       | John, PM     |
-| 2025-10-06     | 6.4     | Aligned Story 1.5 with architectural safety measures regarding data file validation during university approval.                                                      | John, PM     |
-| 2025-10-06     | 6.3     | Added "Duplicate Period" (FR13, Story 3.9) and "Proactive Notification" (FR14, Story 3.10) features to improve admin workflow.                                       | John, PM     |
-| 2025-10-02     | 6.2     | Final version with complete Acceptance Criteria for all new stories, refined through elicitation. PRD is finalized.                                                  | John, PM     |
-| 2025-10-02     | 6.1     | Applied structural changes and new requirements based on alignment with front-end-spec v2.0.                                                                         | John, PM     |
-| 2025-10-02     | 6.0     | Final PRD incorporating all refinements from the completed elicitation process. PRD is now locked and ready for architecture.                                        | John, PM     |
-| 2025-10-02     | 5.0     | Final PRD incorporating all elicitation refinements and multi-admin concurrency controls. Ready for architecture.                                                    | John, PM     |
-| 2025-10-02     | 4.0     | Final version incorporating all elicitation refinements. Removed overrides, added safeguards (Cancel Period, Timezone), and improved UX flows.                       | John, PM     |
-| 2025-10-02     | 3.1     | Removed department-level form overrides to reduce complexity. Aligned PRD with product decisions from front-end-spec-1.7.                                            | John, PM     |
-| 2025-09-30     | 3.0     | Added Epic 2 for historical data import & refined stories based on elicitation. Updated UI goals.                                                                    | John, PM     |
-| 2025-09-29     | 2.1     | Added support for department-level form overrides to enhance customization and data quality.                                                                         | John, PM     |
-| 2025-09-28     | 2.0     | Final PRD with all 5 epics and elicitation refinements.                                                                                                              | John, PM     |
-| 2025-09-28     | 1.0     | Initial PRD draft based on Project Brief and Capstone Manuscript.                                                                                                    | John, PM     |
+| Date           | Version | Description                                                                                                                                                        | Author       |
+| :------------- | :------ | :----------------------------------------------------------------------------------------------------------------------------------------------------------------- | :----------- |
+| **2025-10-08** | **8.1** | **Refined Story 3.1 to include an admin interface for managing new university-specific settings, aligning with the `UniversitySetting` data model.**               | **John, PM** |
+| **2025-10-08** | **8.0** | **Updated NFR2 and NFR11 to explicitly state that score weights and integrity thresholds are now configurable via the `UniversitySetting` model, not hard-coded.** | **John, PM** |
+| 2025-10-08     | 7.9     | Refined Story 2.2 and 5.6 to align with the finalized `BackgroundTask` and `GeneratedReport` data models from the architectural specification.                     | John, PM     |
+| 2025-10-08     | 7.8     | Added FR19 to centralize and formalize the system-wide notification requirement, aligning with the new `Notification` model from the architectural specification.  | John, PM     |
+| 2025-10-08     | 7.7     | Added FR18 to require a pre-computation check and size limit for report generation to protect system stability, per architectural review.                          | John, PM     |
+| 2025-10-08     | 7.6     | Refined FR8 to specify data latency (e.g., 5 mins) due to micro-batching architecture. Added FR17 for an admin API to re-aggregate historical data.                | John, PM     |
+| 2025-10-08     | 7.5     | Refined NFR11 to explicitly require that integrity check thresholds (e.g., similarity percentage) must be configurable per university, per architectural review.   | John, PM     |
+| 2025-10-08     | 7.4     | Added NFR13 to mandate detailed audit logging for all administrative actions on forms and periods, per architectural review.                                       | John, PM     |
+| 2025-10-07     | 7.3     | Added FR16 to mandate a 24-hour expiration on new user verification links per architectural review to enhance security.                                            | John, PM     |
+| 2025-10-07     | 7.2     | Added NFR12 to make AI Assistant and Report Generation rate limits configurable as per architectural recommendation for operational control.                       | John, PM     |
+| 2025-10-07     | 7.1     | Updated NFR2 to make the 60/40 score weighting a configurable, database-seeded value per architectural recommendation for future flexibility.                      | John, PM     |
+| 2025-10-07     | 7.0     | Added NFR11 for modular design of the data integrity engine to ensure future extensibility.                                                                        | John, PM     |
+| 2025-10-07     | 6.9     | Added auto-save functionality as an acceptance criterion for the form builder (Story 3.3) to prevent data loss during edits.                                       | John, PM     |
+| 2025-10-07     | 6.8     | Added `Completed_Partial_Failure` status for bulk imports and defined partial failure report behavior to improve data import resilience.                           | John, PM     |
+| 2025-10-07     | 6.7     | Added NFR10 for Transactional Integrity to ensure critical business processes are atomic.                                                                          | John, PM     |
+| 2025-10-07     | 6.6     | Added Story 1.7 for Super Admin user account management and renumbered backup story to 1.8.                                                                        | John, PM     |
+| 2025-10-07     | 6.5     | Added FR15 to prevent deletion of in-use resources. Refactored Period Cancellation (Story 3.6, 3.8) to a 72-hour restorable soft cancellation.                     | John, PM     |
+| 2025-10-06     | 6.4     | Aligned Story 1.5 with architectural safety measures regarding data file validation during university approval.                                                    | John, PM     |
+| 2025-10-06     | 6.3     | Added "Duplicate Period" (FR13, Story 3.9) and "Proactive Notification" (FR14, Story 3.10) features to improve admin workflow.                                     | John, PM     |
+| 2025-10-02     | 6.2     | Final version with complete Acceptance Criteria for all new stories, refined through elicitation. PRD is finalized.                                                | John, PM     |
+| 2025-10-02     | 6.1     | Applied structural changes and new requirements based on alignment with front-end-spec v2.0.                                                                       | John, PM     |
+| 2025-10-02     | 6.0     | Final PRD incorporating all refinements from the completed elicitation process. PRD is now locked and ready for architecture.                                      | John, PM     |
+| 2025-10-02     | 5.0     | Final PRD incorporating all elicitation refinements and multi-admin concurrency controls. Ready for architecture.                                                  | John, PM     |
+| 2025-10-02     | 4.0     | Final version incorporating all elicitation refinements. Removed overrides, added safeguards (Cancel Period, Timezone), and improved UX flows.                     | John, PM     |
+| 2025-10-02     | 3.1     | Removed department-level form overrides to reduce complexity. Aligned PRD with product decisions from front-end-spec-1.7.                                          | John, PM     |
+| 2025-09-30     | 3.0     | Added Epic 2 for historical data import & refined stories based on elicitation. Updated UI goals.                                                                  | John, PM     |
+| 2025-09-29     | 2.1     | Added support for department-level form overrides to enhance customization and data quality.                                                                       | John, PM     |
+| 2025-09-28     | 2.0     | Final PRD with all 5 epics and elicitation refinements.                                                                                                            | John, PM     |
+| 2025-09-28     | 1.0     | Initial PRD draft based on Project Brief and Capstone Manuscript.                                                                                                  | John, PM     |
 
 ---
 
@@ -98,11 +102,19 @@ Existing faculty evaluation systems, particularly within the Philippines and at 
 -   **FR16: Secure Account Verification**: To enhance security, account verification links sent to new users must automatically expire 24 hours after they are issued.
 -   **FR17: Administrative Re-aggregation**: The system must provide a secure, admin-only API endpoint to trigger a full recalculation of all final, normalized scores for a given historical evaluation period. This enables reprocessing of data if scoring logic or configuration (like score weighting) is updated. A UI for this feature is not required for V1.
 -   **FR18: Report Generation Limits**: To ensure system stability, the generation of reports is subject to a size limit. If a user's filter criteria would result in a report exceeding a configurable number of records, the request must be rejected, and the user must be prompted to narrow their search or apply more specific filters.
+-   **FR19: Centralized Notification System**
+    -   The system shall implement a centralized notification service to manage all user-facing alerts, backed by the `Notification` data model.
+    -   Notifications must be stored in the database, linked to the recipient user.
+    -   The system must support two primary delivery methods: **In-App** (viewable within the user's dashboard) and **Email**.
+    -   The in-app notification interface must allow users to distinguish between `unread` and `read` notifications.
+    -   Specific events that must trigger notifications include, but are not limited to: user account verification, completion of background jobs (e.g., imports), flagged evaluation resolution, and proactive administrative prompts.
 
 #### **Non-Functional Requirements**
 
 -   **NFR1: Architecture:** The system shall be a multi-tenant SaaS web platform with a modular, scalable, and asynchronous architecture.
--   **NFR2: Data Integrity and Scoring:** The overall evaluation score must be calculated using a weighted scheme. For V1, this weighting is defined as **60% from Likert-scale data and 40% from textual feedback analysis**. This value must be stored as a **configurable, database-seeded parameter** to allow for future administrative adjustments without requiring a code deployment.
+-   **NFR2: Configurable Scoring Logic**
+    -   The final evaluation score for a faculty member is a weighted combination of the aggregated quantitative (e.g., Likert scale) and qualitative (e.g., sentiment analysis) scores.
+    -   The weighting must not be hard-coded. Instead, it must be stored as a configurable value within the `university_settings` table, allowing each university (tenant) to adjust the balance (e.g., 60/40, 70/30) as needed. The system will be seeded with a default of 60% quantitative and 40% qualitative.
 -   **NFR3: Performance:** Access to AI-generated suggestions shall be restricted to Faculty and Department Heads to manage performance.
 -   **NFR4: Security:** The system must implement robust user registration and authentication protocols.
 -   **NFR5: Extensibility and Research:** The V1 production system will exclusively use the fine-tuned XLM-ROBERTa model. For academic comparison, a separate, non-production script or environment will be created to benchmark baseline models (VADER, Naïve Bayes, mBERT).
@@ -111,7 +123,9 @@ Existing faculty evaluation systems, particularly within the Philippines and at 
 -   **NFR8: Timezone Standardization:** The entire platform shall operate on a single, standardized timezone: **Philippine Standard Time (PST / Asia/Manila)**. All times displayed in the UI must be explicitly labeled as PST to prevent ambiguity.
 -   **NFR9: Concurrency Control:** To ensure data integrity in a multi-admin environment, the system must implement **Optimistic Locking** for all shared, editable resources (e.g., Form Templates). Concurrent actions (e.g., two admins resolving the same item) must be handled gracefully on the backend on a "first-come, first-served" basis.
 -   **NFR10: Transactional Integrity:** All critical, multi-step business processes that modify the database, such as university onboarding or evaluation period cancellation, must be executed as atomic transactions to prevent the system from entering an inconsistent state upon partial failure.
--   **NFR11: Extensibility of Integrity Engine:** The automated flagging algorithms for data integrity must be designed to be modular. The specific thresholds, such as the 'Recycled Content' similarity percentage, **must be stored as configurable values per university** and not hardcoded. The core logic (e.g., the similarity checking method) should be swappable to allow for future improvements and tuning without re-architecting the system. While a UI for administrators to manage these settings is deferred to a post-V1 release, the backend must be built to support this configurability from day one.
+-   **NFR11: Configurable Data Integrity Engine**
+    -   The system's data integrity checks (e.g., recycled content detection, low-effort submission flagging) must be designed in a modular fashion to allow for future expansion.
+    -   Crucially, the thresholds for these checks (e.g., similarity percentage for recycled content) must be configurable on a per-university basis via the `university_settings` table. This ensures that administrators can fine-tune the engine's sensitivity to match their institution's specific academic standards.
 -   **NFR12: Configurable Rate Limiting:** To ensure system stability and control operational costs, the system **must implement rate-limiting** for resource-intensive features, specifically the **AI Assistant (Story 6.2)** and **Report Generation (Story 5.6)**. The thresholds for these limits **must be stored as configurable values** in the `UniversitySetting` table and **must not be hardcoded**. Default values will be seeded for V1, and a UI for Admins to manage these settings is deferred to a post-V1 release.
 -   **NFR13: Administrative Auditing**: All critical, state-changing actions performed by an administrator related to the evaluation lifecycle (including creating, updating, activating, or archiving form templates, and scheduling or cancelling evaluation periods) must generate a detailed entry in the system's audit log. The log must record the administrator who performed the action, the action taken, the target entity, and a timestamp.
 
@@ -296,13 +310,13 @@ The architecture will be a **simple monolith** consisting of a single FastAPI ba
 
 -   **As an** Admin, **I want** a centralized dashboard to view the status of all my background jobs (including data imports, report generation, and period cancellations), **so that** I can track progress and diagnose failures.
 -   **Acceptance Criteria:**
-    1.  A new "Job Monitor" page is added to the Admin dashboard, replacing the "Import History" page.
-    2.  The page lists all initiated background jobs with their status.
-    3.  The table must display: **Job Type**, **Source Filename** (if applicable), **Submitted At**, **Status**, and a **Details/Download** link.
-    4.  The table must support pagination.
-    5.  For a `Failed` job, the 'Details/Download' link must trigger the download of a report that contains the original row data plus an 'Error' column explaining the validation failure.
-    6.  The page must include a 'Cancel' button for any job that is still in `Queued`.
--   **Dev Note:** The job lifecycle must include the statuses: `Queued`, `Processing`, `Completed_Success`, **`Completed_Partial_Failure`**, `Failed`, and `Cancelled`.
+    1.  A new "Job Monitor" page is added to the Admin dashboard.
+    2.  The page provides a user-facing view of records from the `background_tasks` table that are associated with the Admin's university.
+    3.  The list must display: **Job Type** (mapping the `job_type` enum, e.g., 'User Import'), **Source Filename** (if applicable, from `job_parameters`), **Submitted At** (`created_at`), **Status** (mapping the `status` enum), and a **Details/Download** link.
+    4.  The table must support pagination and filtering by status.
+    5.  For a job with status `failed` or `completed_partial_failure`, the 'Details/Download' link must trigger the download of an error report from the location specified in the job's `result_storage_path`.
+    6.  A 'Cancel' button is available for any job that has a `queued` status.
+-   **Dev Note:** The job lifecycle must include the statuses: `Queued`, `Processing`, `Completed_Success`, **`Completed_Partial_Failure`**, `Failed`, and `Cancelled`, which map to the `background_tasks` status enum.
 
 **Story 2.3: Academic Structure Bulk Import**
 
@@ -363,17 +377,20 @@ The architecture will be a **simple monolith** consisting of a single FastAPI ba
 
 UX Note: To improve the first-time user experience, the "Evaluation Management" page should consider a guided wizard or checklist for new Admins, walking them through the `Create -> Activate -> Assign` sequence.
 
-**Story 3.1: Evaluation Form Template Creation**
+**Story 3.1: University Profile and Settings Management**
 
--   **As an** Admin, **I want** to create a new evaluation form template by providing a name, description, and core settings, **so that** I can begin building a new evaluation instrument.
+-   **As an** Admin, **I want** a settings page to manage my university's profile and key operational parameters, **so that** I can control core business logic without needing technical support.
 -   **Acceptance Criteria:**
-    1.  From the Admin dashboard, I can navigate to an "Evaluation Management" page that lists existing form templates.
-    2.  This page has a "Create New Form Template" action.
-    3.  Creating a new template requires a unique `name`.
-    4.  I can optionally apply an "Intended for" label ('Students', 'Department Heads', or 'Both') to the template for organizational purposes.
-    5.  I can select a predefined Likert scale (e.g., "Standard 1-5 Scale") to be used for all numerical questions on the form.
-    6.  Upon saving, a new record is created in the `evaluation_form_templates` table with a default status of 'draft'.
-    7.  **Developer Note:** For V1, the available Likert scales (4, 5, and 7-point) will be seeded directly into the `likert_scale_templates` table during initial deployment. This is not a feature for Admins to create their own scales.
+    1.  An "Institution Settings" page is available in the Admin dashboard.
+    2.  The page displays the university's core profile information (Name, Address) in a read-only format.
+    3.  The page provides an interface to view and edit values stored in the `university_settings` table that are associated with the Admin's university.
+    4.  The following settings must be editable through this interface:
+        -   **Quantitative Score Weight** (e.g., `score_weight_quantitative`)
+        -   **Qualitative Score Weight** (e.g., `score_weight_qualitative`)
+        -   **Recycled Content Similarity Threshold**
+    5.  Input fields must be validated (e.g., score weights must sum to 1.0, threshold must be a percentage).
+    6.  Saving the changes updates the corresponding records in the `university_settings` table and logs the action in the audit trail.
+-   **Dev Note:** This interface is the primary mechanism for admins to control the newly architected configurable business rules. The front-end will fetch these settings upon login and use them to inform calculations and validation logic throughout the application.
 
 **Story 3.2: Managing Form Criteria**
 
@@ -631,10 +648,10 @@ UX Note: To improve the first-time user experience, the "Evaluation Management" 
 -   **Acceptance Criteria:**
     1.  A "Report Center" link in the side navigation leads to a dedicated page with two main areas: "Generate Report" and "My Reports".
     2.  The "Generate Report" area allows a user to select a predefined report type and apply relevant filters.
-    3.  The system will use smart logic to either generate simple reports synchronously (immediate download) or enqueue complex reports as an asynchronous background job.
-    4.  The "My Reports" area acts as an inbox, listing all generated reports with their status (e.g., 'Generating', 'Ready', 'Failed').
-    5.  Users receive a notification when an asynchronous report is ready and can download it from the "My Reports" list.
-    6.  The system supports exporting reports in both **PDF** (via WeasyPrint) and **CSV/Excel** (via pandas) formats.
+    3.  The system will use smart logic to either generate simple reports synchronously (immediate download) or enqueue complex reports as an asynchronous background job, creating a corresponding record in the `background_tasks` table.
+    4.  The "My Reports" area acts as an inbox, providing a user-facing view of their records in the `generated_reports` table. It must list all initiated reports with their current `status` (e.g., 'Generating', 'Ready', 'Failed').
+    5.  Users receive a notification (via the centralized notification system) when an asynchronous report's status changes to 'Ready', and they can download the file from the `storage_path` via the "My Reports" list.
+    6.  The system supports exporting reports in both **PDF** (via WeasyPrint) and **CSV/Excel** (via pandas) formats, as specified in the `file_format` field of the report record.
 
 #### **Epic 6: AI-Powered Actionable Intelligence**
 

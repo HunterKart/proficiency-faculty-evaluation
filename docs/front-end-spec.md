@@ -30,32 +30,34 @@ The interface must feel clean, trustworthy, and represent a significant upgrade 
 
 ### **Changelog**
 
-| Date       | Version | Description                                                                                                                                                                                                       | Author           |
-| :--------- | :------ | :---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | :--------------- |
-| 2025-10-08 | 3.5     | Added UI/UX for handling the `413 Payload Too Large` error in the Report Center, guiding users to refine overly broad report requests.                                                                            | Sally, UX Expert |
-| 2025-10-08 | 3.4     | Added UI/UX pattern for handling `409 Conflict` errors to gracefully manage concurrent administrative edits, ensuring a clear user recovery path.                                                                 | Sally, UX Expert |
-| 2025-10-07 | 3.3     | Added UI/UX specifications for WebSocket disconnection and reconnection handling in the Job Monitor flow to ensure a resilient user experience.                                                                   | Sally, UX Expert |
-| 2025-10-07 | 3.2     | Added error handling UI/UX for expired account verification links to the onboarding flow, ensuring a clear recovery path for the user.                                                                            | Sally, UX Expert |
-| 2025-10-07 | 3.1     | Added error handling for a `503 Service Unavailable` state to the **'Faculty - Generate AI Suggestions'** flow, ensuring a clear user experience when the AI service's circuit breaker is open.                   | Sally, UX Expert |
-| 2025-10-07 | 3.0     | Aligned `CommentViewerDialog` component dependency with the new dedicated `Comment Data Service` as per architect's request.                                                                                      | Sally, UX Expert |
-| 2025-10-07 | 2.9     | Added 'Super Admin - Tenant User Management' user flow. Updated Notification Panel component spec to include real-time indicators via WebSocket.                                                                  | Sally, UX Expert |
-| 2025-10-07 | 2.8     | Updated the **'Faculty - Generate AI Suggestions'** flow to be fully asynchronous, leveraging the Job Monitor WebSocket for real-time progress updates. Simplified the report export to a direct PDF download.    | Sally, UX Expert |
-| 2025-10-07 | 2.7     | Refined Dashboard and Report Center user flows to specify component-level data refetching for filters and a unified asynchronous process for all report generation, respectively.                                 | Sally, UX Expert |
-| 2025-10-07 | 2.6     | Enhanced the **'Flagged Evaluation Review'** user flow. The specification now requires the UI to dynamically highlight the exact text that triggered the flag, using API-provided data, to improve Admin clarity. | Sally, UX Expert |
-| 2025-10-07 | 2.5     | Refined **Admin - Background Job Monitoring** flow to distinguish between success and partial failure statuses. Added new metadata display for import job details (Total Rows, Rows Processed, Rows Failed).      | Sally, UX Expert |
-| 2025-10-07 | 2.4     | Added flow for handling deletion of in-use resources. Updated Emergency Cancellation flow with a "Cancelled (Restorable)" state and added a new flow for the restore action.                                      | Sally, UX Expert |
-| 2025-10-07 | 2.3     | Added concurrency error handling (409 Conflict) to the Super Admin University Onboarding flow as per architect's request.                                                                                         | Sally, UX Expert |
-| 2025-10-06 | 2.2     | Updated the "Super Admin - University Onboarding" user flow to include a two-step approval process, adding a confirmation modal to display file validation summaries before final action.                         | Sally, UX Expert |
-| 2025-10-06 | 2.1     | Integrated UI/UX for new admin features (Duplicate Period, Proactive Notifications) from PRD v6.3. Added Notification Center to IA and defined NotificationItem component.                                        | Sally, UX Expert |
-| 2025-10-02 | 2.0     | Finalized all user flows and completed all design sections (Branding, Accessibility, Responsiveness, Animation). Added alignment notes for PM. Spec is now ready for architectural handoff.                       | Sally, UX Expert |
-| 2025-10-01 | 1.7     | **Restored missing flow diagrams and technical notes from previous versions to create a single, complete master specification.**                                                                                  | Sally, UX Expert |
-| 2025-10-01 | 1.6     | Finalized and integrated the "Managerial & Administrative Review" user flow with all elicitation refinements. Added tiered dashboard layouts and the hybrid "drill-down" approach for viewing comments.           | Sally, UX Expert |
-| 2025-10-01 | 1.5     | Consolidated and restored all missing flow diagrams and technical notes from previous versions to create a complete, unified specification.                                                                       | Sally, UX Expert |
-| 2025-10-01 | 1.4     | Finalized all user flows and integrated elicitation refinements.                                                                                                                                                  | Sally, UX Expert |
-| 2025-09-30 | 1.3     | Added refined Admin and Super Admin user flows.                                                                                                                                                                   | Sally, UX Expert |
-| 2025-09-30 | 1.2     | Refined Sections 1 & 2 to align with new PRD.                                                                                                                                                                     | Sally, UX Expert |
-| 2025-09-28 | 1.1     | Expanded introduction with developer-focused notes.                                                                                                                                                               | Sally, UX Expert |
-| 2025-09-28 | 1.0     | Initial draft of the UI/UX Specification.                                                                                                                                                                         | Sally, UX Expert |
+| Date       | Version | Description                                                                                                                                                                                                                                         | Author           |
+| :--------- | :------ | :-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | :--------------- |
+| 2025-10-08 | 3.7     | **Final data model alignment pass.** Refined the `CommentViewerDialog` component specification to source its anonymity threshold from the new `UniversitySetting` data model, ensuring full architectural consistency.                              | Sally, UX Expert |
+| 2025-10-08 | 3.6     | **Refined UI/UX spec to align with the final, approved data models.** Updated the Job Monitor flow to include a diagnostic view for failed jobs and expanded the Notification Panel component spec to align with the new `Notification` data model. | Sally, UX Expert |
+| 2025-10-08 | 3.5     | Added UI/UX for handling the `413 Payload Too Large` error in the Report Center, guiding users to refine overly broad report requests.                                                                                                              | Sally, UX Expert |
+| 2025-10-08 | 3.4     | Added UI/UX pattern for handling `409 Conflict` errors to gracefully manage concurrent administrative edits, ensuring a clear user recovery path.                                                                                                   | Sally, UX Expert |
+| 2025-10-07 | 3.3     | Added UI/UX specifications for WebSocket disconnection and reconnection handling in the Job Monitor flow to ensure a resilient user experience.                                                                                                     | Sally, UX Expert |
+| 2025-10-07 | 3.2     | Added error handling UI/UX for expired account verification links to the onboarding flow, ensuring a clear recovery path for the user.                                                                                                              | Sally, UX Expert |
+| 2025-10-07 | 3.1     | Added error handling for a `503 Service Unavailable` state to the **'Faculty - Generate AI Suggestions'** flow, ensuring a clear user experience when the AI service's circuit breaker is open.                                                     | Sally, UX Expert |
+| 2025-10-07 | 3.0     | Aligned `CommentViewerDialog` component dependency with the new dedicated `Comment Data Service` as per architect's request.                                                                                                                        | Sally, UX Expert |
+| 2025-10-07 | 2.9     | Added 'Super Admin - Tenant User Management' user flow. Updated Notification Panel component spec to include real-time indicators via WebSocket.                                                                                                    | Sally, UX Expert |
+| 2025-10-07 | 2.8     | Updated the **'Faculty - Generate AI Suggestions'** flow to be fully asynchronous, leveraging the Job Monitor WebSocket for real-time progress updates. Simplified the report export to a direct PDF download.                                      | Sally, UX Expert |
+| 2025-10-07 | 2.7     | Refined Dashboard and Report Center user flows to specify component-level data refetching for filters and a unified asynchronous process for all report generation, respectively.                                                                   | Sally, UX Expert |
+| 2025-10-07 | 2.6     | Enhanced the **'Flagged Evaluation Review'** user flow. The specification now requires the UI to dynamically highlight the exact text that triggered the flag, using API-provided data, to improve Admin clarity.                                   | Sally, UX Expert |
+| 2025-10-07 | 2.5     | Refined **Admin - Background Job Monitoring** flow to distinguish between success and partial failure statuses. Added new metadata display for import job details (Total Rows, Rows Processed, Rows Failed).                                        | Sally, UX Expert |
+| 2025-10-07 | 2.4     | Added flow for handling deletion of in-use resources. Updated Emergency Cancellation flow with a "Cancelled (Restorable)" state and added a new flow for the restore action.                                                                        | Sally, UX Expert |
+| 2025-10-07 | 2.3     | Added concurrency error handling (409 Conflict) to the Super Admin University Onboarding flow as per architect's request.                                                                                                                           | Sally, UX Expert |
+| 2025-10-06 | 2.2     | Updated the "Super Admin - University Onboarding" user flow to include a two-step approval process, adding a confirmation modal to display file validation summaries before final action.                                                           | Sally, UX Expert |
+| 2025-10-06 | 2.1     | Integrated UI/UX for new admin features (Duplicate Period, Proactive Notifications) from PRD v6.3. Added Notification Center to IA and defined NotificationItem component.                                                                          | Sally, UX Expert |
+| 2025-10-02 | 2.0     | Finalized all user flows and completed all design sections (Branding, Accessibility, Responsiveness, Animation). Added alignment notes for PM. Spec is now ready for architectural handoff.                                                         | Sally, UX Expert |
+| 2025-10-01 | 1.7     | **Restored missing flow diagrams and technical notes from previous versions to create a single, complete master specification.**                                                                                                                    | Sally, UX Expert |
+| 2025-10-01 | 1.6     | Finalized and integrated the "Managerial & Administrative Review" user flow with all elicitation refinements. Added tiered dashboard layouts and the hybrid "drill-down" approach for viewing comments.                                             | Sally, UX Expert |
+| 2025-10-01 | 1.5     | Consolidated and restored all missing flow diagrams and technical notes from previous versions to create a complete, unified specification.                                                                                                         | Sally, UX Expert |
+| 2025-10-01 | 1.4     | Finalized all user flows and integrated elicitation refinements.                                                                                                                                                                                    | Sally, UX Expert |
+| 2025-09-30 | 1.3     | Added refined Admin and Super Admin user flows.                                                                                                                                                                                                     | Sally, UX Expert |
+| 2025-09-30 | 1.2     | Refined Sections 1 & 2 to align with new PRD.                                                                                                                                                                                                       | Sally, UX Expert |
+| 2025-09-28 | 1.1     | Expanded introduction with developer-focused notes.                                                                                                                                                                                                 | Sally, UX Expert |
+| 2025-09-28 | 1.0     | Initial draft of the UI/UX Specification.                                                                                                                                                                                                           | Sally, UX Expert |
 
 ---
 
@@ -730,7 +732,7 @@ flowchart TD
 
 -   **User Goal:** To monitor the status of all critical background jobs (imports, cancellations, report generation), diagnose failures, and have the ability to gracefully cancel a running job or manually intervene if a job becomes stuck.
 -   **Entry Points:** The Admin clicks on a newly named "Job Monitor" link in the main sidebar navigation.
--   **Success Criteria:** An Admin can view the real-time status and progress of a background job. If a job fails, the Admin can immediately download an error report. If a job is taking too long, the Admin can request cancellation and see the system respond to the request.
+-   **Success Criteria:** An Admin can view the real-time status and progress of a background job. If a job fails, the Admin can immediately view diagnostic logs and download a detailed error report. If a job is taking too long, the Admin can request cancellation and see the system respond to the request.
 
 **Flow Diagram:**
 
@@ -756,8 +758,9 @@ flowchart TD
         G --> H["Job finishes current batch & stops"];
         H --> I["Status updates to: 'Failed'"];
 
-        C -- "Job is 'Failed' or 'Completed-Partial-Failure'" --> J{Admin sees 'Download Error Report' button};
-        J --> K[Clicks to download report];
+        C -- "Job is 'Failed' or 'Completed-Partial-Failure'" --> J{Admin sees 'View Log' & 'Download Report' buttons};
+        J -- "Clicks 'View Log'" --> J_Log[Open Dialog with 'log_output' text];
+        J -- "Clicks 'Download Report'" --> K[Trigger download from 'result_storage_path'];
 
         C -- "Job is 'Processing' and stuck" --> L{Admin sees 'Force Fail' button<br/>after a timeout};
         L --> M[Clicks 'Force Fail' --> Confirms];
@@ -766,6 +769,7 @@ flowchart TD
     end
 
     I --> Z[End];
+    J_Log --> Z;
     K --> Z;
 ```
 
@@ -777,7 +781,9 @@ flowchart TD
     -   **Disconnection UX**: When the connection is lost, the UI **must** display a clear, non-intrusive message (e.g., a `shadcn/ui` `<Alert>` stating "Connection lost, attempting to reconnect..."). The progress bar and status for active jobs should remain in their last known state but can be overlaid with a subtle pattern (e.g., a semi-transparent diagonal stripe) to indicate the data is potentially stale. The "Force Fail" and "Request Cancellation" buttons **must** be disabled during the disconnected state.
     -   **Reconnection UX**: Upon successful reconnection, the alert message **must** be removed, the connection indicator should turn green, and the UI **must** trigger a full data refresh (`TanStack Query` invalidation) to show the current, accurate status of all jobs.
 -   **Cooperative Cancellation:** For jobs in a `processing` state, a "Request Cancellation" button will be available. This action sends a signal for the job to stop gracefully after its current task. The UI **must** display a transitional `cancellation_requested` status while waiting for the job to confirm stoppage.
--   **Streamlined Error Reporting:** For any job with a status of `failed` or `completed_partial_failure`, the main job list will now display a direct "Download Error Report" button, making the error details immediately accessible without needing to open a details dialog.
+-   **Enhanced Error Reporting:** For any job with a status of `failed` or `completed_partial_failure`, the UI will provide two distinct actions:
+    -   **`View Log`**: This button will open a modal (`shadcn/ui` `<Dialog>`) that displays the raw, pre-formatted text from the `BackgroundTask.log_output` field. This provides immediate, on-screen diagnostics for quick debugging.
+    -   **`Download Error Report`**: This button will initiate a file download using the path stored in the `BackgroundTask.result_storage_path` field, providing a more comprehensive report (e.g., a CSV of failed rows).
 -   **Centralized Monitor:** This page replaces the "Import Job History" page and must be the single source of truth for monitoring all `RQ` jobs.
 -   **Visual Status Indicators:** The "Status" column in the main table must use clear visual icons to differentiate states:
     -   `Completed-Success`: A green checkmark icon.
@@ -919,10 +925,21 @@ The project will adhere to a consistent design system built upon **`shadcn/ui`**
     -   **`WordCloudChart`**: A client component wrapping `echarts-wordcloud`.
     -   **`FilterBar`**: A component that groups all standard filter dropdowns.
     -   **`ModeSwitcher`**: The control used by Admins and Department Heads to switch their data view context.
-    -   **`CommentViewerDialog`**: A dialog component triggered by clicking on a chart segment. It displays anonymized comments and enforces the anonymity threshold by showing a privacy message if the response count is too low.
-        -   **_Developer Note:_** _This component must fetch its data exclusively from the dedicated **`Comment Data Service`** to ensure server-side enforcement of anonymity thresholds._
-    -   **`NotificationPanel`**: A component, likely a dropdown or sheet, that contains a list of `NotificationItem` components. Its trigger (e.g., a bell icon in the main header) **must display a real-time indicator** (e.g., a red dot) instantly when a new notification is received via the WebSocket connection, without requiring a page refresh.
-    -   **`NotificationItem`**: A reusable component to display a single notification in a list or panel, providing key information (title, message, timestamp) and a clear call-to-action button.
+    -   **`CommentViewerDialog`**: A dialog component triggered by clicking on a chart segment. It displays anonymized comments.
+        -   **Anonymity Enforcement:** The component **must** enforce the university-wide anonymity threshold. If the number of comments for the selected group is below this threshold, it will display a privacy message (e.g., "More responses are needed before individual comments can be shown") instead of the comments themselves.
+        -   **_Developer Note:_** _This component **must** fetch its data exclusively from the dedicated **`Comment Data Service`**. This service is responsible for enforcing the anonymity threshold by checking the value from the `UniversitySetting` table (e.g., a setting named `anonymity_threshold`) on the server-side before returning any comment data._
+    -   **`NotificationPanel`**: A component, likely a `shadcn/ui` `<Sheet>` or `<Popover>`, that contains a list of `NotificationItem` components. Its trigger (e.g., a bell icon in the main header) **must display a real-time indicator** (e.g., a red dot) instantly when a new notification is received via the WebSocket connection, without requiring a page refresh. The panel will display notifications fetched from the `/api/notifications` endpoint, which returns records from the `Notification` data model. It should include tabs or filters for "All" and "Unread" notifications.
+    -   **`NotificationItem`**: A reusable component designed to render a single record from the `Notification` data model.
+        -   **Purpose:** To display a notification's content, timestamp, and status in a clear, consistent format.
+        -   **Data Contract:** The component will accept a prop of type `Notification`.
+        -   **Key Elements:**
+            -   An icon determined by the `action_type` (e.g., a checkmark for `IMPORT_COMPLETE`, a flag for `FLAG_RESOLUTION`).
+            -   The main notification `content` text.
+            -   A relative timestamp derived from the `created_at` field (e.g., "5 minutes ago").
+            -   An "unread" status indicator (e.g., a blue dot) if `status` is `'unread'`.
+        -   **Interactions:**
+            -   Clicking the item marks it as read (API call to `PATCH /api/notifications/{id}`) and can navigate the user to a relevant page if the `action_type` implies a destination (e.g., a `FLAG_RESOLUTION` notification navigates to the resolved flag's detail view).
+            -   An "archive" action will be available to change the notification's `status` to `'archived'`.
 
 ---
 
