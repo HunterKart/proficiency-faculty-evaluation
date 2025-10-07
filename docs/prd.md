@@ -24,6 +24,8 @@ Existing faculty evaluation systems, particularly within the Philippines and at 
 
 | Date       | Version | Description                                                                                                                                    | Author   |
 | :--------- | :------ | :--------------------------------------------------------------------------------------------------------------------------------------------- | :------- |
+| 2025-10-07 | 6.9     | Added auto-save functionality as an acceptance criterion for the form builder (Story 3.3) to prevent data loss during edits.                   | John, PM |
+| 2025-10-07 | 6.8     | Added `Completed_Partial_Failure` status for bulk imports and defined partial failure report behavior to improve data import resilience.       | John, PM |
 | 2025-10-07 | 6.7     | Added NFR10 for Transactional Integrity to ensure critical business processes are atomic.                                                      | John, PM |
 | 2025-10-07 | 6.6     | Added Story 1.7 for Super Admin user account management and renumbered backup story to 1.8.                                                    | John, PM |
 | 2025-10-07 | 6.5     | Added FR15 to prevent deletion of in-use resources. Refactored Period Cancellation (Story 3.6, 3.8) to a 72-hour restorable soft cancellation. | John, PM |
@@ -290,7 +292,7 @@ The architecture will be a **simple monolith** consisting of a single FastAPI ba
     4.  The table must support pagination.
     5.  For a `Failed` job, the 'Details/Download' link must trigger the download of a report that contains the original row data plus an 'Error' column explaining the validation failure.
     6.  The page must include a 'Cancel' button for any job that is still in `Queued`.
--   **Dev Note:** The job lifecycle must include the statuses: `Queued`, `Processing`, `Completed`, `Failed`, `Cancelled`.
+-   **Dev Note:** The job lifecycle must include the statuses: `Queued`, `Processing`, `Completed_Success`, **`Completed_Partial_Failure`**, `Failed`, and `Cancelled`.
 
 **Story 2.3: Academic Structure Bulk Import**
 
@@ -301,17 +303,26 @@ The architecture will be a **simple monolith** consisting of a single FastAPI ba
     3.  The asynchronous job validates the uploaded CSV, returning a comprehensive error report if issues are found, and does not proceed until errors are resolved.
     4.  A successful import correctly populates all relevant academic structure tables and is idempotent.
     5.  The admin receives a notification and the job status is updated on the "Job Monitor" page.
+    6.  **A partially successful import (where only some batches fail) must result in a `Completed_Partial_Failure` status. The downloadable error report for such a job must contain only the rows from the failed batches, allowing the Admin to correct and re-upload only the problematic data.**
 -   **Dev/QA Notes:** The Architect must define the precise CSV format. The asynchronous validation must prevent web server timeouts. QA will require 'bad' CSV files for testing.
 
 **Story 2.4: Historical User & Enrollment Bulk Import**
 
 -   **As an** Admin, **I want** to bulk import historical user and enrollment data from CSV files, **so that** past academic records are accurately reflected in the system.
--   **AC & Notes:** Follows the same structure as Story 2.3 for importing users and enrollments.
+-   **Acceptance Criteria & Notes:** Follows the same structure as Story 2.3 for importing users and enrollments.
+-   **Acceptance Criteria:**
+    1.  (All criteria from 2.3 apply)
+    2.  ...
+    3.  **A partially successful import (where only some batches fail) must result in a `Completed_Partial_Failure` status. The downloadable error report for such a job must contain only the rows from the failed batches, allowing the Admin to correct and re-upload only the problematic data.**
 
 **Story 2.5: Historical Evaluation Records Bulk Import**
 
 -   **As an** Admin, **I want** to bulk import past evaluation records (both numerical and open-ended) from a CSV file, **so that** historical feedback is available for analysis.
--   **AC & Notes:** Follows the same structure as Story 2.3 for importing historical evaluations.
+-   **Acceptance Criteria & Notes:** Follows the same structure as Story 2.3 for importing historical evaluations.
+-   **Acceptance Criteria:**
+    1.  (All criteria from 2.3 apply)
+    2.  ...
+    3.  **A partially successful import (where only some batches fail) must result in a `Completed_Partial_Failure` status. The downloadable error report for such a job must contain only the rows from the failed batches, allowing the Admin to correct and re-upload only the problematic data.**
 
 **Story 2.6: Fine-Tune Sentiment Analysis Model for Cebuano & Code-Switching**
 
@@ -340,7 +351,7 @@ The architecture will be a **simple monolith** consisting of a single FastAPI ba
 
 #### **Epic 3: Administrative Control Panel**
 
-_UX Note: To improve the first-time user experience, the "Evaluation Management" page should consider a guided wizard or checklist for new Admins, walking them through the `Create -> Activate -> Assign` sequence._
+UX Note: To improve the first-time user experience, the "Evaluation Management" page should consider a guided wizard or checklist for new Admins, walking them through the `Create -> Activate -> Assign` sequence.
 
 **Story 3.1: Evaluation Form Template Creation**
 
@@ -372,6 +383,7 @@ _UX Note: To improve the first-time user experience, the "Evaluation Management"
     3.  The system displays a warning if more than three open-ended questions are added but allows an override up to a maximum of eight.
     4.  I can set whether each question is required to be answered or optional.
     5.  At any point while editing a 'draft' template, I can select a "Preview" option that shows how the form will be rendered for evaluators.
+    6.  While a form template is in a `draft` state, the system must automatically save any changes made by the Admin on a periodic basis (e.g., every 60 seconds) to prevent data loss.
 
 **Story 3.4a: Form Template Activation & Duplication**
 
