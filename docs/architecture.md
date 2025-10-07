@@ -231,6 +231,7 @@ This section defines the complete relational data schema for the application. Th
     -   `contact_person_email`: The email address for all communications.
     -   `status`: The current stage of the application (`submitted`, `in_review`, `approved`, `rejected`).
     -   `rejection_reason`: A text field to store the reason for a rejection, if applicable.
+    -   **`details`**: **(New)** A flexible `JSON` field to store additional, non-critical registration metadata for future extensibility without requiring schema changes.
 -   **TypeScript Interface**:
     ```typescript
     interface UniversityRegistrationRequest {
@@ -240,6 +241,7 @@ This section defines the complete relational data schema for the application. Th
         contactPersonEmail: string;
         status: "submitted" | "in_review" | "approved" | "rejected";
         rejectionReason?: string;
+        details?: Record<string, any>; // For future flexibility
         createdAt: Date;
         updatedAt: Date;
     }
@@ -2721,10 +2723,10 @@ This group defines the foundational, cross-cutting components that enable the mu
 
 #### **`[Backend]` Authentication Service**
 
--   **Responsibility:** Manages all security-critical logic. This includes credential verification (password hashing with `bcrypt`), multi-factor authentication for Super Admins (`pyotp`), and the generation/validation of stateless JWT access and refresh tokens. It also handles the token invalidation mechanism via the `tokenVersion` field in the user models.
--   **Key Interfaces:** Exposes the API endpoints under `/auth/*` and `/super-admin/login/*` as defined in the API Specification.
--   **Dependencies:** `User & Role Service` (to fetch user data), Database (to access `users` and `super_admins` tables).
--   **Technology Stack:** Python, FastAPI, SQLAlchemy, `passlib[bcrypt]`, `pyotp`, `python-jose`.
+-   **Responsibility**: Manages all security-critical logic. This includes credential verification (password hashing with `bcrypt`), multi-factor authentication for Super Admins (`pyotp`), and the generation/validation of stateless JWT access and refresh tokens. It is also responsible for issuing and validating **time-limited, single-use tokens** for actions like account verification and password resets. It handles the token invalidation mechanism via the `tokenVersion` field in the user models.
+-   **Key Interfaces**: Exposes the API endpoints under `/auth/*` and `/super-admin/login/*` as defined in the API Specification.
+-   **Dependencies**: `User & Role Service` (to fetch user data), Database (to access `users` and `super_admins` tables).
+-   **Technology Stack**: Python, FastAPI, SQLAlchemy, `passlib[bcrypt]`, `pyotp`, `python-jose`.
 
 #### **`[Backend]` User & Role Service**
 

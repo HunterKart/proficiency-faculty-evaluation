@@ -32,6 +32,7 @@ The interface must feel clean, trustworthy, and represent a significant upgrade 
 
 | Date       | Version | Description                                                                                                                                                                                                       | Author           |
 | :--------- | :------ | :---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | :--------------- |
+| 2025-10-07 | 3.2     | Added error handling UI/UX for expired account verification links to the onboarding flow, ensuring a clear recovery path for the user.                                                                            | Sally, UX Expert |
 | 2025-10-07 | 3.1     | Added error handling for a `503 Service Unavailable` state to the **'Faculty - Generate AI Suggestions'** flow, ensuring a clear user experience when the AI service's circuit breaker is open.                   | Sally, UX Expert |
 | 2025-10-07 | 3.0     | Aligned `CommentViewerDialog` component dependency with the new dedicated `Comment Data Service` as per architect's request.                                                                                      | Sally, UX Expert |
 | 2025-10-07 | 2.9     | Added 'Super Admin - Tenant User Management' user flow. Updated Notification Panel component spec to include real-time indicators via WebSocket.                                                                  | Sally, UX Expert |
@@ -442,6 +443,45 @@ flowchart TD
 -   **Concurrency Error Handling:** Any action that modifies the request state (moving to "In Review," approving, or rejecting) **must** handle a `409 Conflict` response from the API. Upon receiving a `409`, the UI must display the global "Content Out of Date" modal, forcing the user to refresh their view to ensure they are acting on the latest information.
 -   **Automation:** Upon approval, the backend automatically enqueues the pre-validated structural data for import, streamlining setup for the new University Admin and creating a positive first impression.
 -   **Recovery:** The Super Admin UI will have a mechanism to resend the verification email to a new Admin in case of initial email delivery failure.
+
+#### **Flow: New User - Account Verification**
+
+-   **User Goal:** To verify their new account via an email link and log into the platform for the first time.
+-   **Entry Points:** The user clicks the verification link in the email sent after the Super Admin approved their university's onboarding.
+-   **Success Criteria:** The user's account is marked as verified, they are logged in, and they are redirected to their role-specific Dashboard.
+
+**Flow Diagram:**
+
+```mermaid
+flowchart TD
+    A[Start: New user clicks verification link in email] --> B[User is directed to the verification page];
+    B --> C[API Call: Validate token from URL];
+    C --> D{Token is valid & not expired?};
+
+    D -- Yes --> E[Backend verifies user account];
+    E --> F[User is automatically logged in];
+    F --> G["UI displays success message:<br/>'Your account has been verified.'"];
+    G --> H[Redirect to role-specific Dashboard];
+    H --> I[End];
+
+    D -- No --> J[UI displays the Expired Link page];
+    subgraph "Expired Link Page"
+        J --> K["Page displays clear message:<br/>'This verification link has expired.<br/>Please use the button below to request a new one.'"];
+        K --> L["A prominent 'Resend Verification Email' button is displayed"];
+    end
+
+    L --> M{User clicks 'Resend Email'};
+    M --> N[API Call: Request new verification email];
+    N --> O["UI displays a confirmation toast:<br/>'A new verification link has been sent to your email address.'"];
+    O --> I;
+
+```
+
+**Technical & Developer Notes:**
+
+-   **Clear User Experience:** The page for an expired or invalid token **must not** be a generic error page. It is a key part of the onboarding user flow and should be styled consistently with the rest of the application, adhering to the "Clarity Over Cleverness" design principle.
+-   **UI Components:** The page should use a `shadcn/ui` `<Card>` to present the message and the `<Button>` for the resend action.
+-   **API Endpoint:** This flow relies on an API endpoint (e.g., `POST /api/auth/resend-verification`) that allows an unauthenticated user to request a new verification email, likely identified by the expired token or an email address input field.
 
 #### **Flow: Generating and Downloading a Formal Report (Restored)**
 

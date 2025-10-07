@@ -20,10 +20,9 @@ Existing faculty evaluation systems, particularly within the Philippines and at 
 
 #### **Change Log**
 
-### **Change Log**
-
 | Date           | Version | Description                                                                                                                                      | Author       |
 | :------------- | :------ | :----------------------------------------------------------------------------------------------------------------------------------------------- | :----------- |
+| **2025-10-07** | **7.3** | **Added FR16 to mandate a 24-hour expiration on new user verification links per architectural review to enhance security.**                      | **John, PM** |
 | **2025-10-07** | **7.2** | **Added NFR12 to make AI Assistant and Report Generation rate limits configurable as per architectural recommendation for operational control.** | **John, PM** |
 | 2025-10-07     | 7.1     | Updated NFR2 to make the 60/40 score weighting a configurable, database-seeded value per architectural recommendation for future flexibility.    | John, PM     |
 | 2025-10-07     | 7.0     | Added NFR11 for modular design of the data integrity engine to ensure future extensibility.                                                      | John, PM     |
@@ -94,6 +93,7 @@ Existing faculty evaluation systems, particularly within the Philippines and at 
 -   **FR13: Duplicate Evaluation Period Assignment**: Admins shall have the ability to duplicate an existing evaluation period assignment to pre-fill the creation form with the same form template configuration, requiring only new scheduling details to be entered.
 -   **FR14: Proactive Period Setup Notification**: The system shall generate a notification for Admins when an evaluation period concludes, prompting them to schedule the next logical period and providing a one-click action to begin the duplication process.
 -   **FR15: In-Use Resource Protection**: The system must prevent the archival or deletion of any resource (e.g., Form Template) that is currently assigned to an active or scheduled Evaluation Period. An attempt to do so must result in a clear error message explaining the dependency.
+-   **FR16: Secure Account Verification**: To enhance security, account verification links sent to new users must automatically expire 24 hours after they are issued.
 
 #### **Non-Functional Requirements**
 
@@ -227,9 +227,9 @@ The architecture will be a **simple monolith** consisting of a single FastAPI ba
     1.  The initial Super Admin dashboard must display summary cards for 'Active Universities,' 'Total Users,' and 'Pending Requests'.
     2.  The main component of the dashboard is an interface for managing requests through distinct stages: 'New', 'In Review', and 'Resolved'.
     3.  Approving a request creates a new record in the `universities` table, creates an initial `Admin` account in the `users` table, and updates the request status to 'approved'.
-    4.  Upon approval, an email is sent to the `contact_person_email` containing a confirmation message and a unique link to verify their new Admin account and set their password.
+    4.  Upon approval, an email is sent to the `contact_person_email` containing a confirmation message and a unique, time-limited link to verify their new Admin account and set their password.
     5.  Rejecting a request requires a reason and triggers an email notification to the applicant with the reason for rejection, moving the request to the 'Resolved' stage.
-    6.  The login page, when encountering an unverified Admin account, displays an error message and a 'Resend Verification Email' button that re-triggers the confirmation email.
+    6.  The login page, when encountering an unverified Admin account, displays an error message and a 'Resend Verification Email' button that re-triggers the confirmation email. This function must also handle cases where the user's original verification link has expired.
     7.  The approval process must include a final confirmation step where the Super Admin acknowledges the validation status of any optionally uploaded data files before the approval can be finalized.
 
 **Story 1.6a: Bulk Import Validation & Feedback**
