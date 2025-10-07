@@ -32,6 +32,7 @@ The interface must feel clean, trustworthy, and represent a significant upgrade 
 
 | Date       | Version | Description                                                                                                                                                                                                       | Author           |
 | :--------- | :------ | :---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | :--------------- |
+| 2025-10-07 | 3.0     | Aligned `CommentViewerDialog` component dependency with the new dedicated `Comment Data Service` as per architect's request.                                                                                      | Sally, UX Expert |
 | 2025-10-07 | 2.9     | Added 'Super Admin - Tenant User Management' user flow. Updated Notification Panel component spec to include real-time indicators via WebSocket.                                                                  | Sally, UX Expert |
 | 2025-10-07 | 2.8     | Updated the **'Faculty - Generate AI Suggestions'** flow to be fully asynchronous, leveraging the Job Monitor WebSocket for real-time progress updates. Simplified the report export to a direct PDF download.    | Sally, UX Expert |
 | 2025-10-07 | 2.7     | Refined Dashboard and Report Center user flows to specify component-level data refetching for filters and a unified asynchronous process for all report generation, respectively.                                 | Sally, UX Expert |
@@ -844,12 +845,13 @@ The project will adhere to a consistent design system built upon **`shadcn/ui`**
 
 -   **Design System Approach:** A shared UI package will be created within the monorepo to house any custom composite components built using `shadcn/ui` primitives.
 -   **Core Custom Components:**
-    -   **`DashboardCard`:** A standardized wrapper for all dashboard widgets.
-    -   **`SentimentChart`:** A client component wrapping `Echarts` for sentiment bar charts.
-    -   **`WordCloudChart`:** A client component wrapping `echarts-wordcloud`.
-    -   **`FilterBar`:** A component that groups all standard filter dropdowns.
-    -   **`ModeSwitcher`:** The control used by Admins and Department Heads to switch their data view context.
+    -   **`DashboardCard`**: A standardized wrapper for all dashboard widgets.
+    -   **`SentimentChart`**: A client component wrapping `Echarts` for sentiment bar charts.
+    -   **`WordCloudChart`**: A client component wrapping `echarts-wordcloud`.
+    -   **`FilterBar`**: A component that groups all standard filter dropdowns.
+    -   **`ModeSwitcher`**: The control used by Admins and Department Heads to switch their data view context.
     -   **`CommentViewerDialog`**: A dialog component triggered by clicking on a chart segment. It displays anonymized comments and enforces the anonymity threshold by showing a privacy message if the response count is too low.
+        -   **_Developer Note:_** _This component must fetch its data exclusively from the dedicated **`Comment Data Service`** to ensure server-side enforcement of anonymity thresholds._
     -   **`NotificationPanel`**: A component, likely a dropdown or sheet, that contains a list of `NotificationItem` components. Its trigger (e.g., a bell icon in the main header) **must display a real-time indicator** (e.g., a red dot) instantly when a new notification is received via the WebSocket connection, without requiring a page refresh.
     -   **`NotificationItem`**: A reusable component to display a single notification in a list or panel, providing key information (title, message, timestamp) and a clear call-to-action button.
 

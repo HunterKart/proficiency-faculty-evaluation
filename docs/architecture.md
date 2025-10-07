@@ -101,6 +101,37 @@ graph LR
     style BackupStore fill:#E1E1E1
 ```
 
+### **Refined Dashboard Data Flow Diagram**
+
+This diagram illustrates the separation of concerns between fetching aggregated dashboard data and fetching raw, privacy-protected comment data.
+
+```mermaid
+sequenceDiagram
+    participant User
+    participant DashboardShell as [FE] Dashboard Shell
+    participant VisualizationComp as [FE] Visualization Components
+    participant CommentViewer as [FE] Comment Viewer
+    participant DashboardService as [BE] Dashboard Data Service
+    participant CommentService as [BE] Comment Data Service
+
+    User->>DashboardShell: Navigates to Dashboard
+    DashboardShell->>DashboardService: GET /dashboard?filters=...
+    DashboardService->>DashboardService: Calculates provisional data / Fetches aggregates
+    DashboardService-->>DashboardShell: Returns structured dashboard JSON
+    DashboardShell->>VisualizationComp: Renders charts with aggregated data
+
+    User->>VisualizationComp: Clicks on a chart segment
+    VisualizationComp->>CommentViewer: Emits event to open viewer with filters
+    CommentViewer->>CommentService: GET /comments?filters=...
+    CommentService->>CommentService: Enforces anonymity threshold (server-side)
+    alt Anonymity Threshold Met
+        CommentService-->>CommentViewer: Returns list of anonymized comments
+    else Threshold Not Met
+        CommentService-->>CommentViewer: Returns 403 Forbidden
+    end
+    CommentViewer-->>User: Displays comments or privacy message
+```
+
 ### **Architectural Patterns**
 
 -   **Decoupled SPA & Monolithic API:** The system is structured with a distinct separation between the frontend Single-Page Application (SPA) and the backend monolithic API[cite: 3]. This allows for independent development, deployment, and scaling of the client and server components.
@@ -1244,6 +1275,31 @@ The model is updated to make the calculation of the resubmission grace period an
 
 ---
 
+### **UniversitySetting (New Model)**
+
+-   **Purpose**: To store tenant-specific, configurable key-value settings for a university. This model provides a flexible way to manage business rules, such as the evaluation score weighting, without requiring code changes. As default, this will be seeded with 60/40 weight for calculating the overall evaluation score (derived from overall qualitative and quantitative scores).
+-   **Key Attributes**:
+    -   `id`: Primary key.
+    -   `university_id`: Foreign key linking the setting to a specific `University`.
+    -   `setting_name`: The unique key for the setting (e.g., `'score_weight_quantitative'`).
+    -   `setting_value`: The value of the setting, stored as a string or JSON to be parsed by the application (e.g., `'0.60'`).
+    -   `created_at` / `updated_at`: Timestamps for record management.
+-   **TypeScript Interface**:
+    ```typescript
+    interface UniversitySetting {
+        id: number;
+        universityId: number;
+        settingName: string; // e.g., 'score_weight_quantitative'
+        settingValue: string; // e.g., '0.60'
+        createdAt: Date;
+        updatedAt: Date;
+    }
+    ```
+-   **Relationships**:
+    -   Belongs to one `University`.
+
+---
+
 ## **API Specification**
 
 This section provides the complete and definitive OpenAPI 3.0 specification for the Proficiency platform. It is the single source of truth for all API development, detailing every endpoint, data contract, and architectural principle that governs the communication between the frontend and backend.
@@ -2272,14 +2328,14 @@ paths:
     /comments:
         get:
             summary: "Get Anonymized Comments for a Data Point"
-            description: "Retrieves the raw, anonymized open-ended comments associated with a specific slice of data. Enforces the anonymity threshold."
+            description: "Retrieves the raw, anonymized open-ended comments associated with a specific slice of data. This endpoint is handled by a dedicated service that **strictly enforces the anonymity threshold server-side.** If the number of underlying responses is below the configured minimum, this endpoint will return a 403 Forbidden status to protect evaluator privacy."
             tags: ["Dashboards"]
             parameters:
                 - name: school_term_id
-                  in: query
-                  required: true
-                  schema:
-                      type: integer
+                in: query
+                required: true
+                schema:
+                    type: integer
                 # ... other required filters to define the data slice
             responses:
                 "200":
@@ -2291,7 +2347,7 @@ paths:
                                 items:
                                     type: string
                 "403":
-                    description: "Forbidden. The number of responses for this data slice is below the anonymity threshold."
+                    description: "Forbidden. The number of responses for this data slice is below the anonymity threshold, and the data cannot be shown to protect privacy."
     /reports:
         get:
             summary: "List Generated Reports"

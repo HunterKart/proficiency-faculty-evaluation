@@ -24,6 +24,7 @@ Existing faculty evaluation systems, particularly within the Philippines and at 
 
 | Date       | Version | Description                                                                                                                                    | Author   |
 | :--------- | :------ | :--------------------------------------------------------------------------------------------------------------------------------------------- | :------- |
+| 2025-10-07 | 7.1     | Updated NFR2 to make the 60/40 score weighting a configurable, database-seeded value per architectural recommendation for future flexibility.  | John, PM |
 | 2025-10-07 | 7.0     | Added NFR11 for modular design of the data integrity engine to ensure future extensibility.                                                    | John, PM |
 | 2025-10-07 | 6.9     | Added auto-save functionality as an acceptance criterion for the form builder (Story 3.3) to prevent data loss during edits.                   | John, PM |
 | 2025-10-07 | 6.8     | Added `Completed_Partial_Failure` status for bulk imports and defined partial failure report behavior to improve data import resilience.       | John, PM |
@@ -96,7 +97,7 @@ Existing faculty evaluation systems, particularly within the Philippines and at 
 #### **Non-Functional Requirements**
 
 -   **NFR1: Architecture:** The system shall be a multi-tenant SaaS web platform with a modular, scalable, and asynchronous architecture.
--   **NFR2: Data Integrity and Scoring:** The overall evaluation score must be calculated using a weighted scheme: 60% from Likert-scale data and 40% from textual feedback analysis.
+-   **NFR2: Data Integrity and Scoring:** The overall evaluation score must be calculated using a weighted scheme. For V1, this weighting is defined as **60% from Likert-scale data and 40% from textual feedback analysis**. This value must be stored as a **configurable, database-seeded parameter** to allow for future administrative adjustments without requiring a code deployment.
 -   **NFR3: Performance:** Access to AI-generated suggestions shall be restricted to Faculty and Department Heads to manage performance.
 -   **NFR4: Security:** The system must implement robust user registration and authentication protocols.
 -   **NFR5: Extensibility and Research:** The V1 production system will exclusively use the fine-tuned XLM-ROBERTa model. For academic comparison, a separate, non-production script or environment will be created to benchmark baseline models (VADER, Naïve Bayes, mBERT).
