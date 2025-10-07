@@ -2832,10 +2832,10 @@ This group contains all components related to the administrative setup of the ev
 
 #### **`[Frontend]` Form Builder Module**
 
--   **Responsibility**: Provides a rich, interactive user interface for Admins to create, manage, and preview dynamic evaluation form templates. This includes defining criteria, adding weighted sections, and managing both Likert-scale and open-ended questions. It **must implement an auto-save feature** that periodically saves changes for templates in a `draft` status to prevent data loss during long editing sessions.
--   **Key Interfaces**: A main page at `/admin/form-management` featuring a table of existing templates, and a multi-step wizard or tabbed interface for the form creation/editing process.
--   **Dependencies**: `Form Template Service [Backend]`, `TanStack Query` for all data operations, `shadcn/ui` components.
--   **Technology Stack**: React, TypeScript, TanStack Query, React Hook Form, Zod, `shadcn/ui` (Table, Stepper, Form), `dnd-kit` (for reordering).
+-   **Responsibility**: Provides a rich, interactive user interface for Admins to create, manage, and preview dynamic evaluation form templates. It implements an auto-save feature that periodically saves changes for `draft` templates. It **must gracefully handle `409 Conflict` errors** received during auto-save by notifying the user that the form has been updated by someone else and providing a clear action to refresh the data.
+-   **Key Interfaces**: A main page at `/admin/form-management` and a multi-step wizard or tabbed interface for form creation/editing.
+-   **Dependencies**: `Form Template Service [Backend]`, `TanStack Query`, `shadcn/ui` components.
+-   **Technology Stack**: React, TypeScript, TanStack Query, React Hook Form, Zod, `dnd-kit`.
 
 ---
 
@@ -2859,18 +2859,18 @@ This group contains all components related to the administrative setup of the ev
 
 #### **`[Backend]` Form Template Service**
 
--   **Responsibility**: Exposes the API for all CRUD operations on `EvaluationFormTemplates`, `EvaluationCriteria`, and `EvaluationQuestions`. It is responsible for enforcing all business logic, such as ensuring criteria weights sum to 100 before a form can be activated and preventing the deletion of a template assigned to an active period (**FR15**). It **must implement optimistic locking using a `version` field**. Any request that modifies a template must include the current version, and the service will reject requests with a stale version by returning a `409 Conflict`. It must also support partial updates to accommodate the frontend's **auto-save functionality** for `draft` templates.
+-   **Responsibility**: Exposes the API for all CRUD operations on `EvaluationFormTemplates`, `EvaluationCriteria`, and `EvaluationQuestions`. It is responsible for enforcing all business logic (e.g., weights sum to 100). It **must implement optimistic locking using a `version` field** to prevent concurrent edit conflicts. Furthermore, every state-changing operation (`POST`, `PUT`, `DELETE`) handled by this service **must generate a detailed entry in the `AuditLog` table** to ensure full traceability of administrative actions.
 -   **Key Interfaces**: RESTful API endpoints under `/admin/form-templates/*`.
--   **Dependencies**: Database, `Authentication Service`.
+-   **Dependencies**: Database, `Authentication Service`, `AuditLog` Service.
 -   **Technology Stack**: Python, FastAPI, SQLAlchemy, Pydantic.
 
 ---
 
 #### **`[Backend]` Evaluation Period Service**
 
--   **Responsibility**: Manages the lifecycle of evaluation periods. This service handles the API for scheduling, updating, and initiating the cancellation or restoration of a period. It ensures that no overlapping periods can be scheduled for the same group of evaluators and prevents edits to periods that are already active.
--   **Key Interfaces**: RESTful API endpoints under `/admin/evaluation-periods/*`, including actions like `POST /.../{id}/duplicate` and `POST /.../{id}/cancel`.
--   **Dependencies**: Database, `Authentication Service`, `Redis` (to enqueue cancellation/restoration jobs).
+-   **Responsibility**: Manages the lifecycle of evaluation periods. On every critical API call, it **must re-validate the period's `start_date_time` and `end_date_time` against the current server time**, acting as the definitive source of truth for a period's active status. It handles the API for scheduling, updating, and initiating the cancellation or restoration of a period. Every state-changing operation handled by this service **must also generate a detailed entry in the `AuditLog` table**.
+-   **Key Interfaces**: RESTful API endpoints under `/admin/evaluation-periods/*`.
+-   **Dependencies**: Database, `Authentication Service`, `Redis`, `AuditLog` Service.
 -   **Technology Stack**: Python, FastAPI, SQLAlchemy, Pydantic.
 
 ---

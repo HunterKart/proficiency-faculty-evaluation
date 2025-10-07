@@ -32,6 +32,7 @@ The interface must feel clean, trustworthy, and represent a significant upgrade 
 
 | Date       | Version | Description                                                                                                                                                                                                       | Author           |
 | :--------- | :------ | :---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | :--------------- |
+| 2025-10-08 | 3.4     | Added UI/UX pattern for handling `409 Conflict` errors to gracefully manage concurrent administrative edits, ensuring a clear user recovery path.                                                                 | Sally, UX Expert |
 | 2025-10-07 | 3.3     | Added UI/UX specifications for WebSocket disconnection and reconnection handling in the Job Monitor flow to ensure a resilient user experience.                                                                   | Sally, UX Expert |
 | 2025-10-07 | 3.2     | Added error handling UI/UX for expired account verification links to the onboarding flow, ensuring a clear recovery path for the user.                                                                            | Sally, UX Expert |
 | 2025-10-07 | 3.1     | Added error handling for a `503 Service Unavailable` state to the **'Faculty - Generate AI Suggestions'** flow, ensuring a clear user experience when the AI service's circuit breaker is open.                   | Sally, UX Expert |
@@ -1114,7 +1115,11 @@ sequenceDiagram
 ```
 
 **UI Specification:**
-When the frontend receives a `409 Conflict` response, it **must** display a modal dialog (`shadcn/ui` `<AlertDialog>`) with the title "Content Out of Date," a description explaining the situation, and a single action button labeled **"Refresh to see updates."**
+When the frontend receives a `409 Conflict` response, it **must** display a modal dialog (`shadcn/ui` `<AlertDialog>`) with the title "**Content Out of Date**," a description such as, "**This item has been modified by another user since you loaded it**," and a single action button labeled **"Refresh to see updates."**
 
 **Applicable User Flows:**
-This global pattern **must** be implemented for all user flows involving the modification of shared resources (Form Management, Flagged Evaluation Review, etc.).
+This global pattern **must** be implemented for all user flows involving the modification of shared resources, including but not limited to:
+
+-   Admin - Form & Period Management
+-   Admin - Flagged Evaluation Review
+-   Super Admin - University Onboarding

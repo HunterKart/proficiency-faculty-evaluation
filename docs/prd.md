@@ -22,6 +22,7 @@ Existing faculty evaluation systems, particularly within the Philippines and at 
 
 | Date           | Version | Description                                                                                                                                      | Author       |
 | :------------- | :------ | :----------------------------------------------------------------------------------------------------------------------------------------------- | :----------- |
+| **2025-10-08** | **7.4** | **Added NFR13 to mandate detailed audit logging for all administrative actions on forms and periods, per architectural review.**                 | **John, PM** |
 | **2025-10-07** | **7.3** | **Added FR16 to mandate a 24-hour expiration on new user verification links per architectural review to enhance security.**                      | **John, PM** |
 | **2025-10-07** | **7.2** | **Added NFR12 to make AI Assistant and Report Generation rate limits configurable as per architectural recommendation for operational control.** | **John, PM** |
 | 2025-10-07     | 7.1     | Updated NFR2 to make the 60/40 score weighting a configurable, database-seeded value per architectural recommendation for future flexibility.    | John, PM     |
@@ -109,6 +110,7 @@ Existing faculty evaluation systems, particularly within the Philippines and at 
 -   **NFR10: Transactional Integrity:** All critical, multi-step business processes that modify the database, such as university onboarding or evaluation period cancellation, must be executed as atomic transactions to prevent the system from entering an inconsistent state upon partial failure.
 -   **NFR11: Extensibility of Integrity Engine:** The automated flagging algorithms for data integrity must be designed to be modular. The specific thresholds (e.g., similarity percentage) must be configurable, and the core logic (e.g., the similarity checking method) should be swappable to allow for future improvements and tuning without re-architecting the system.
 -   **NFR12: Configurable Rate Limiting:** To ensure system stability and control operational costs, the system **must implement rate-limiting** for resource-intensive features, specifically the **AI Assistant (Story 6.2)** and **Report Generation (Story 5.6)**. The thresholds for these limits **must be stored as configurable values** in the `UniversitySetting` table and **must not be hardcoded**. Default values will be seeded for V1, and a UI for Admins to manage these settings is deferred to a post-V1 release.
+-   **NFR13: Administrative Auditing**: All critical, state-changing actions performed by an administrator related to the evaluation lifecycle (including creating, updating, activating, or archiving form templates, and scheduling or cancelling evaluation periods) must generate a detailed entry in the system's audit log. The log must record the administrator who performed the action, the action taken, the target entity, and a timestamp.
 
 ---
 
