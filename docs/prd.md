@@ -20,30 +20,31 @@ Existing faculty evaluation systems, particularly within the Philippines and at 
 
 #### **Change Log**
 
-| Date           | Version | Description                                                                                                                                      | Author       |
-| :------------- | :------ | :----------------------------------------------------------------------------------------------------------------------------------------------- | :----------- |
-| **2025-10-08** | **7.4** | **Added NFR13 to mandate detailed audit logging for all administrative actions on forms and periods, per architectural review.**                 | **John, PM** |
-| **2025-10-07** | **7.3** | **Added FR16 to mandate a 24-hour expiration on new user verification links per architectural review to enhance security.**                      | **John, PM** |
-| **2025-10-07** | **7.2** | **Added NFR12 to make AI Assistant and Report Generation rate limits configurable as per architectural recommendation for operational control.** | **John, PM** |
-| 2025-10-07     | 7.1     | Updated NFR2 to make the 60/40 score weighting a configurable, database-seeded value per architectural recommendation for future flexibility.    | John, PM     |
-| 2025-10-07     | 7.0     | Added NFR11 for modular design of the data integrity engine to ensure future extensibility.                                                      | John, PM     |
-| 2025-10-07     | 6.9     | Added auto-save functionality as an acceptance criterion for the form builder (Story 3.3) to prevent data loss during edits.                     | John, PM     |
-| 2025-10-07     | 6.8     | Added `Completed_Partial_Failure` status for bulk imports and defined partial failure report behavior to improve data import resilience.         | John, PM     |
-| 2025-10-07     | 6.7     | Added NFR10 for Transactional Integrity to ensure critical business processes are atomic.                                                        | John, PM     |
-| 2025-10-07     | 6.6     | Added Story 1.7 for Super Admin user account management and renumbered backup story to 1.8.                                                      | John, PM     |
-| 2025-10-07     | 6.5     | Added FR15 to prevent deletion of in-use resources. Refactored Period Cancellation (Story 3.6, 3.8) to a 72-hour restorable soft cancellation.   | John, PM     |
-| 2025-10-06     | 6.4     | Aligned Story 1.5 with architectural safety measures regarding data file validation during university approval.                                  | John, PM     |
-| 2025-10-06     | 6.3     | Added "Duplicate Period" (FR13, Story 3.9) and "Proactive Notification" (FR14, Story 3.10) features to improve admin workflow.                   | John, PM     |
-| 2025-10-02     | 6.2     | Final version with complete Acceptance Criteria for all new stories, refined through elicitation. PRD is finalized.                              | John, PM     |
-| 2025-10-02     | 6.1     | Applied structural changes and new requirements based on alignment with front-end-spec v2.0.                                                     | John, PM     |
-| 2025-10-02     | 6.0     | Final PRD incorporating all refinements from the completed elicitation process. PRD is now locked and ready for architecture.                    | John, PM     |
-| 2025-10-02     | 5.0     | Final PRD incorporating all elicitation refinements and multi-admin concurrency controls. Ready for architecture.                                | John, PM     |
-| 2025-10-02     | 4.0     | Final version incorporating all elicitation refinements. Removed overrides, added safeguards (Cancel Period, Timezone), and improved UX flows.   | John, PM     |
-| 2025-10-02     | 3.1     | Removed department-level form overrides to reduce complexity. Aligned PRD with product decisions from front-end-spec-1.7.                        | John, PM     |
-| 2025-09-30     | 3.0     | Added Epic 2 for historical data import & refined stories based on elicitation. Updated UI goals.                                                | John, PM     |
-| 2025-09-29     | 2.1     | Added support for department-level form overrides to enhance customization and data quality.                                                     | John, PM     |
-| 2025-09-28     | 2.0     | Final PRD with all 5 epics and elicitation refinements.                                                                                          | John, PM     |
-| 2025-09-28     | 1.0     | Initial PRD draft based on Project Brief and Capstone Manuscript.                                                                                | John, PM     |
+| Date           | Version | Description                                                                                                                                                          | Author       |
+| :------------- | :------ | :------------------------------------------------------------------------------------------------------------------------------------------------------------------- | :----------- |
+| **2025-10-08** | **7.5** | **Refined NFR11 to explicitly require that integrity check thresholds (e.g., similarity percentage) must be configurable per university, per architectural review.** | **John, PM** |
+| **2025-10-08** | **7.4** | **Added NFR13 to mandate detailed audit logging for all administrative actions on forms and periods, per architectural review.**                                     | **John, PM** |
+| **2025-10-07** | **7.3** | **Added FR16 to mandate a 24-hour expiration on new user verification links per architectural review to enhance security.**                                          | **John, PM** |
+| **2025-10-07** | **7.2** | **Added NFR12 to make AI Assistant and Report Generation rate limits configurable as per architectural recommendation for operational control.**                     | **John, PM** |
+| 2025-10-07     | 7.1     | Updated NFR2 to make the 60/40 score weighting a configurable, database-seeded value per architectural recommendation for future flexibility.                        | John, PM     |
+| 2025-10-07     | 7.0     | Added NFR11 for modular design of the data integrity engine to ensure future extensibility.                                                                          | John, PM     |
+| 2025-10-07     | 6.9     | Added auto-save functionality as an acceptance criterion for the form builder (Story 3.3) to prevent data loss during edits.                                         | John, PM     |
+| 2025-10-07     | 6.8     | Added `Completed_Partial_Failure` status for bulk imports and defined partial failure report behavior to improve data import resilience.                             | John, PM     |
+| 2025-10-07     | 6.7     | Added NFR10 for Transactional Integrity to ensure critical business processes are atomic.                                                                            | John, PM     |
+| 2025-10-07     | 6.6     | Added Story 1.7 for Super Admin user account management and renumbered backup story to 1.8.                                                                          | John, PM     |
+| 2025-10-07     | 6.5     | Added FR15 to prevent deletion of in-use resources. Refactored Period Cancellation (Story 3.6, 3.8) to a 72-hour restorable soft cancellation.                       | John, PM     |
+| 2025-10-06     | 6.4     | Aligned Story 1.5 with architectural safety measures regarding data file validation during university approval.                                                      | John, PM     |
+| 2025-10-06     | 6.3     | Added "Duplicate Period" (FR13, Story 3.9) and "Proactive Notification" (FR14, Story 3.10) features to improve admin workflow.                                       | John, PM     |
+| 2025-10-02     | 6.2     | Final version with complete Acceptance Criteria for all new stories, refined through elicitation. PRD is finalized.                                                  | John, PM     |
+| 2025-10-02     | 6.1     | Applied structural changes and new requirements based on alignment with front-end-spec v2.0.                                                                         | John, PM     |
+| 2025-10-02     | 6.0     | Final PRD incorporating all refinements from the completed elicitation process. PRD is now locked and ready for architecture.                                        | John, PM     |
+| 2025-10-02     | 5.0     | Final PRD incorporating all elicitation refinements and multi-admin concurrency controls. Ready for architecture.                                                    | John, PM     |
+| 2025-10-02     | 4.0     | Final version incorporating all elicitation refinements. Removed overrides, added safeguards (Cancel Period, Timezone), and improved UX flows.                       | John, PM     |
+| 2025-10-02     | 3.1     | Removed department-level form overrides to reduce complexity. Aligned PRD with product decisions from front-end-spec-1.7.                                            | John, PM     |
+| 2025-09-30     | 3.0     | Added Epic 2 for historical data import & refined stories based on elicitation. Updated UI goals.                                                                    | John, PM     |
+| 2025-09-29     | 2.1     | Added support for department-level form overrides to enhance customization and data quality.                                                                         | John, PM     |
+| 2025-09-28     | 2.0     | Final PRD with all 5 epics and elicitation refinements.                                                                                                              | John, PM     |
+| 2025-09-28     | 1.0     | Initial PRD draft based on Project Brief and Capstone Manuscript.                                                                                                    | John, PM     |
 
 ---
 
@@ -108,7 +109,7 @@ Existing faculty evaluation systems, particularly within the Philippines and at 
 -   **NFR8: Timezone Standardization:** The entire platform shall operate on a single, standardized timezone: **Philippine Standard Time (PST / Asia/Manila)**. All times displayed in the UI must be explicitly labeled as PST to prevent ambiguity.
 -   **NFR9: Concurrency Control:** To ensure data integrity in a multi-admin environment, the system must implement **Optimistic Locking** for all shared, editable resources (e.g., Form Templates). Concurrent actions (e.g., two admins resolving the same item) must be handled gracefully on the backend on a "first-come, first-served" basis.
 -   **NFR10: Transactional Integrity:** All critical, multi-step business processes that modify the database, such as university onboarding or evaluation period cancellation, must be executed as atomic transactions to prevent the system from entering an inconsistent state upon partial failure.
--   **NFR11: Extensibility of Integrity Engine:** The automated flagging algorithms for data integrity must be designed to be modular. The specific thresholds (e.g., similarity percentage) must be configurable, and the core logic (e.g., the similarity checking method) should be swappable to allow for future improvements and tuning without re-architecting the system.
+-   **NFR11: Extensibility of Integrity Engine:** The automated flagging algorithms for data integrity must be designed to be modular. The specific thresholds, such as the 'Recycled Content' similarity percentage, **must be stored as configurable values per university** and not hardcoded. The core logic (e.g., the similarity checking method) should be swappable to allow for future improvements and tuning without re-architecting the system. While a UI for administrators to manage these settings is deferred to a post-V1 release, the backend must be built to support this configurability from day one.
 -   **NFR12: Configurable Rate Limiting:** To ensure system stability and control operational costs, the system **must implement rate-limiting** for resource-intensive features, specifically the **AI Assistant (Story 6.2)** and **Report Generation (Story 5.6)**. The thresholds for these limits **must be stored as configurable values** in the `UniversitySetting` table and **must not be hardcoded**. Default values will be seeded for V1, and a UI for Admins to manage these settings is deferred to a post-V1 release.
 -   **NFR13: Administrative Auditing**: All critical, state-changing actions performed by an administrator related to the evaluation lifecycle (including creating, updating, activating, or archiving form templates, and scheduling or cancelling evaluation periods) must generate a detailed entry in the system's audit log. The log must record the administrator who performed the action, the action taken, the target entity, and a timestamp.
 

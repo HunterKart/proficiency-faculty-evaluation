@@ -800,6 +800,7 @@ This section defines the complete relational data schema for the application. Th
     -   `evaluatee_id`: Foreign key to the `User` being evaluated.
     -   `subject_offering_id`: Foreign key to the specific `SubjectOffering` (class) this evaluation is for.
     -   `status`: The lifecycle status of the submission (`submitted`, `processing`, `processed`, `archived`, `invalidated_for_resubmission`, `cancelled`).
+    -   **`integrity_check_status`**: **(New)** Tracks the state of asynchronous integrity checks (`pending`, `completed`, `failed`).
     -   `submitted_at`: The timestamp when the user submitted the form.
     -   `is_resubmission`: A boolean flag indicating if this is a new submission for a previously flagged evaluation.
     -   `original_submission_id`: A nullable, self-referencing foreign key linking a resubmission back to the original `EvaluationSubmission` that was invalidated.
@@ -820,6 +821,7 @@ This section defines the complete relational data schema for the application. Th
             | "archived"
             | "invalidated_for_resubmission"
             | "cancelled";
+        integrityCheckStatus: "pending" | "completed" | "failed"; // New field
         submittedAt: Date;
         isResubmission: boolean;
         originalSubmissionId?: number;
@@ -1281,7 +1283,7 @@ The model is updated to make the calculation of the resubmission grace period an
 
 ### **UniversitySetting (New Model)**
 
--   **Purpose**: To store tenant-specific, configurable key-value settings for a university. This model provides a flexible way to manage business rules, such as the evaluation score weighting, without requiring code changes. As default, this will be seeded with 60/40 weight for calculating the overall evaluation score (derived from overall qualitative and quantitative scores).
+-   **Purpose**: To store tenant-specific, configurable key-value settings for a university. This model provides a flexible way to manage business rules, such as the evaluation score weighting, without requiring code changes. As default, this will be seeded with 60/40 weight for calculating the overall evaluation score (derived from overall qualitative and quantitative scores). This provides a flexible way to manage business rules, such as evaluation score weighting **and data integrity thresholds**, without requiring code changes.
 -   **Key Attributes**:
     -   `id`: Primary key.
     -   `university_id`: Foreign key linking the setting to a specific `University`.
@@ -1299,6 +1301,10 @@ The model is updated to make the calculation of the resubmission grace period an
         updatedAt: Date;
     }
     ```
+-   **Example Settings**:
+    -   `score_weight_quantitative`: `0.60`
+    -   `score_weight_qualitative`: `0.40`
+    -   `recycled_content_similarity_threshold`: `0.95`
 -   **Relationships**:
     -   Belongs to one `University`.
 
@@ -2908,9 +2914,9 @@ This group defines the core user-facing evaluation workflow and the backend engi
 
 #### **`[Backend]` Evaluation Submission Service**
 
--   **Responsibility**: Ingests completed evaluation submissions from users. It performs initial synchronous validation and, upon success, saves the submission and enqueues the necessary asynchronous jobs for data integrity checks and analysis.
+-   **Responsibility**: Ingests completed evaluation submissions. It performs initial validation, creates the core submission records in the database, and then orchestrates the **"Pluggable Flagging Engine."** It iterates through and executes all registered **synchronous** flagging strategies. Finally, it enqueues a single, generic `process_async_flags` job for the worker to handle the asynchronous strategies.
 -   **Key Interfaces**: A `POST /evaluations/submissions` endpoint.
--   **Dependencies**: Database, `Redis` (to enqueue jobs), `Authentication Service`.
+-   **Dependencies**: Database, `Redis`, `Authentication Service`, `Flagging Engine`.
 -   **Technology Stack**: Python, FastAPI, SQLAlchemy, Pydantic.
 
 ---
@@ -2924,12 +2930,21 @@ This group defines the core user-facing evaluation workflow and the backend engi
 
 ---
 
-#### **`[Worker]` Data Integrity Job Handlers**
+#### **`[Worker]` Asynchronous Flagging Worker (Replaces Data Integrity Job Handlers)**
 
--   **Responsibility**: A collection of asynchronous tasks that perform automated data quality checks. The specific flagging algorithms (e.g., 'Recycled Content' similarity check) **must be implemented as pluggable modules or strategies**. This allows the core flagging engine to remain stable while the detection methods can be updated or replaced in the future. All numerical thresholds used by these handlers (e.g., word counts, similarity percentages) **must be loaded from a central configuration** and not hardcoded.
--   **Key Interfaces**: Python functions consumed from the Redis job queue; they do not expose any network APIs.
--   **Dependencies**: Database, `Flagged Evaluation Service` (to create flags if issues are found).
+-   **Responsibility**: A generic worker that consumes the `process_async_flags` job from the Redis queue. Its sole responsibility is to orchestrate the **"Pluggable Flagging Engine"** by iterating through and executing all registered **asynchronous** flagging strategies for a given submission. For strategies that require configurable values (like the similarity threshold), this worker is responsible for querying the `UniversitySetting` table to retrieve them.
+-   **Key Interfaces**: A Python function consumed from the Redis job queue.
+-   **Dependencies**: Database (`UniversitySetting` table), `Flagging Engine`.
 -   **Technology Stack**: Python, RQ, SQLAlchemy.
+
+---
+
+#### **Flagging Engine (Conceptual Component / Strategy Pattern)**
+
+-   **Responsibility**: This is a conceptual component representing the implementation of a **Strategy Pattern**. It consists of a collection of individual "strategy" classes, each responsible for a single data integrity check (e.g., `LowConfidenceStrategy`, `RecycledContentStrategy`). Each strategy class implements a common interface and self-declares whether it should be executed synchronously or asynchronously. This design makes the system modular and highly extensible, fulfilling **NFR11**.
+-   **Key Interfaces**: An internal `FlaggingStrategy` interface (e.g., an abstract base class) and a central registry that holds all active strategies.
+-   **Dependencies**: Varies by strategy (e.g., Database, AI Models).
+-   **Technology Stack**: Python.
 
 ---
 
