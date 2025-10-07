@@ -840,10 +840,12 @@ This section defines the complete relational data schema for the application. Th
 
 ---
 
-### **FlaggedEvaluation**
+### **FlaggedEvaluation (Refined)**
 
--   **Purpose**: Records an instance of an `EvaluationSubmission` that was automatically flagged for data integrity issues, and tracks the administrative review process and its outcome.
+The model is updated to make the calculation of the resubmission grace period an explicit business rule.
+
 -   **Key Attributes**:
+
     -   `id`: Primary key.
     -   `submission_id`: Foreign key to the `EvaluationSubmission` that was flagged.
     -   `flag_reason`: The reason for the flag (`Low-Confidence`, `Recycled Content`, `Sentiment Mismatch`).
@@ -853,10 +855,12 @@ This section defines the complete relational data schema for the application. Th
     -   `resolved_by_admin_id`: A nullable foreign key to the `User` (Admin) who resolved the flag.
     -   `resolved_at`: A nullable timestamp for when the flag was resolved.
     -   `admin_notes`: A text field for the admin's internal notes or the reason provided to the student.
-    -   `resubmission_grace_period_ends_at`: A nullable timestamp to track the 48-hour resubmission window.
-    -   **`version`**: **(New)** An integer used for optimistic locking to handle concurrent admin reviews.
+    -   **`resubmission_grace_period_ends_at` (Modified)**: A nullable timestamp to track the resubmission window. When `resolution` is set to `resubmission_requested`, this field **must** be set to `resolved_at + 48 hours`.
+    -   `version`: An integer used for optimistic locking to handle concurrent admin reviews.
     -   `created_at` / `updated_at`: Timestamps.
+
 -   **TypeScript Interface**:
+
     ```typescript
     interface FlaggedEvaluation {
         id: number;
@@ -866,7 +870,11 @@ This section defines the complete relational data schema for the application. Th
             | "Recycled Content"
             | "Sentiment Mismatch";
         flagDetails?: {
-            highlights?: FlagHighlight[];
+            highlights?: {
+                question_id: number;
+                start_index: number;
+                end_index: number;
+            }[];
         };
         status: "pending" | "resolved";
         resolution?: "approved" | "archived" | "resubmission_requested";
@@ -879,6 +887,7 @@ This section defines the complete relational data schema for the application. Th
         updatedAt: Date;
     }
     ```
+
 -   **Relationships**:
     -   Belongs to one `EvaluationSubmission`.
     -   Can be resolved by one `User` (Admin).
