@@ -32,6 +32,7 @@ The interface must feel clean, trustworthy, and represent a significant upgrade 
 
 | Date       | Version | Description                                                                                                                                                                                                       | Author           |
 | :--------- | :------ | :---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | :--------------- |
+| 2025-10-07 | 3.1     | Added error handling for a `503 Service Unavailable` state to the **'Faculty - Generate AI Suggestions'** flow, ensuring a clear user experience when the AI service's circuit breaker is open.                   | Sally, UX Expert |
 | 2025-10-07 | 3.0     | Aligned `CommentViewerDialog` component dependency with the new dedicated `Comment Data Service` as per architect's request.                                                                                      | Sally, UX Expert |
 | 2025-10-07 | 2.9     | Added 'Super Admin - Tenant User Management' user flow. Updated Notification Panel component spec to include real-time indicators via WebSocket.                                                                  | Sally, UX Expert |
 | 2025-10-07 | 2.8     | Updated the **'Faculty - Generate AI Suggestions'** flow to be fully asynchronous, leveraging the Job Monitor WebSocket for real-time progress updates. Simplified the report export to a direct PDF download.    | Sally, UX Expert |
@@ -194,6 +195,7 @@ graph TD
 -   **User Goal:** To generate, view, and save actionable suggestions for professional development based on their processed evaluation data.
 -   **Entry Points:** The user clicks on the "AI Assistant" link in the main sidebar navigation.
 -   **Success Criteria:** An AI-generated report is successfully created and becomes available for download. The user can view the real-time progress of the generation.
+-   **Error Handling:** If the AI service is temporarily unavailable, the user is shown a clear, non-technical message and can retry the action later.
 
 **Technical Sequence Diagram:**
 
@@ -212,22 +214,30 @@ sequenceDiagram
     User->>Frontend: Selects filters and clicks "Generate"
     Frontend->>Frontend: Disables button, shows progress indicator (Status: Queued)
     Frontend->>Backend: POST /api/ai/suggestions (body: {term, period})
-    Backend-->>Frontend: 202 Accepted (body: {jobId})
-    Frontend->>WebSocket: Connects to Job Monitor with jobId
 
-    WebSocket-->>Frontend: Pushes progress update (e.g., "Gathering data...")
-    Frontend-->>User: Updates progress indicator text
-    WebSocket-->>Frontend: Pushes progress update (e.g., "Querying AI model...")
-    Frontend-->>User: Updates progress indicator text
-    WebSocket-->>Frontend: Pushes progress update (e.g., "Formatting results...")
-    Frontend-->>User: Updates progress indicator text
-    WebSocket-->>Frontend: Pushes final status: "Completed"
-    Frontend-->>User: Hides progress, displays "Download PDF" button
+    alt Successful Response
+        Backend-->>Frontend: 202 Accepted (body: {jobId})
+        Frontend->>WebSocket: Connects to Job Monitor with jobId
 
-    User->>Frontend: Clicks "Download PDF"
-    Frontend->>Backend: GET /api/ai/reports/{jobId}
-    Backend-->>Frontend: Responds with PDF file for download
-    Frontend-->>User: Triggers file download
+        WebSocket-->>Frontend: Pushes progress update (e.g., "Gathering data...")
+        Frontend-->>User: Updates progress indicator text
+        WebSocket-->>Frontend: Pushes progress update (e.g., "Querying AI model...")
+        Frontend-->>User: Updates progress indicator text
+        WebSocket-->>Frontend: Pushes progress update (e.g., "Formatting results...")
+        Frontend-->>User: Updates progress indicator text
+        WebSocket-->>Frontend: Pushes final status: "Completed"
+        Frontend-->>User: Hides progress, displays "Download PDF" button
+
+        User->>Frontend: Clicks "Download PDF"
+        Frontend->>Backend: GET /api/ai/reports/{jobId}
+        Backend-->>Frontend: Responds with PDF file for download
+        Frontend-->>User: Triggers file download
+
+    else Service Unavailable
+        Backend-->>Frontend: 503 Service Unavailable Error
+        Frontend-->>User: Displays alert: "The AI Assistant is currently unavailable. Please try again in a few minutes."
+        Frontend->>Frontend: Re-enables "Generate" button
+    end
 ```
 
 #### **Flow: Admin - Form & Period Management**
