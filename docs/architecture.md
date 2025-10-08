@@ -12,6 +12,7 @@ N/A - This is a greenfield project. The architecture will be designed from scrat
 
 | Date           | Version | Description                                                                                                                                                                                                                                                        | Author                 |
 | :------------- | :------ | :----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | :--------------------- |
+| 2025-10-09     | 2.5     | Added the complete `Error Handling Strategy` and `Monitoring and Observability` sections, aligning them with the established Tech Stack and project requirements.                                                                                                  | Architect              |
 | **2025-10-09** | **2.4** | Added comprehensive **`Coding Standards`** section (Groups 1-5), including full refinement for path alignment and integration of advanced best practices for frontend data-fetching (centralized query keys) and backend asynchronous patterns ("Surgical Async"). | Winston, Architect     |
 | **2025-10-09** | **2.3** | **Updated `Deployment Architecture` to include a dedicated staging deployment and E2E testing job in the `ci.yml` configuration. This implements the requirements from the `Testing Strategy`, making E2E tests the final gate before production.**                | **Winston, Architect** |
 | **2025-10-09** | **2.2** | **Completed and consolidated the entire `Testing Strategy` section, incorporating all four groups (Foundational Strategy, Test Organization, Integration Testing, and E2E & Specialized Testing).**                                                                | **Winston, Architect** |
@@ -7956,3 +7957,316 @@ A single, consistent naming strategy is crucial for a project's long-term readab
 | Primary Keys                  | `id`                  | `id`                                                     |
 | Foreign Keys                  | `singular_name_id`    | `user_id`, `form_id`, `period_id`                        |
 | Indexes                       | `ix_table_column`     | `ix_users_email`, `ix_evaluations_status`                |
+
+---
+
+## **Error Handling Strategy**
+
+This section defines the unified, end-to-end error handling strategy for the **Proficiency** platform. The architecture ensures that all errors, whether originating from the client, server, or an external service, are handled gracefully, logged consistently, and result in a clear, predictable experience for the user and a traceable diagnostic path for developers.
+
+### **1. Guiding Principles**
+
+-   **Never Leak Internal Details**: Raw exceptions or stack traces must never be exposed to the end-user.
+-   **Provide User-Centric Feedback**: Users should receive clear, actionable feedback appropriate to the error context (e.g., "This field is required," "This content is out of date").
+-   **Ensure Traceability**: Every server-side error must be logged with a unique, correlating `requestId` that is also sent to the client, enabling developers to trace a specific user-reported issue directly to its server-side logs.
+-   **Fail Predictably**: The system's response to any given error class (e.g., validation, authentication, server fault) must be consistent and predictable across the entire application.
+
+### **2. Standardized Error Response Format**
+
+All API error responses **must** conform to the following `ApiError` interface. This is the single source of truth for error communication between the backend and frontend.
+
+```typescript
+// packages/shared-types/src/schemas/error.ts
+export interface ApiError {
+    error: {
+        code: string; // e.g., "VALIDATION_ERROR", "UNAUTHENTICATED"
+        message: string; // Human-readable summary.
+        details?: Record<string, any>; // Field-specific validation messages or other context.
+        requestId: string; // Unique ID for log correlation.
+    };
+}
+```
+
+### **3. End-to-End Error Flow**
+
+This diagram illustrates the complete journey of various error types, from backend origination to frontend UI response.
+
+```mermaid
+sequenceDiagram
+    participant FE as [FE] Component
+    participant Client as [FE] API Client
+    participant BE as [BE] FastAPI Backend
+    participant Logger as [BE] Logging Service
+
+    FE->>Client: 1. Initiates API call
+    activate Client
+    Client->>BE: 2. Sends HTTP Request (with unique Request ID in middleware)
+    deactivate Client
+    activate BE
+
+    alt 422: Validation Error
+        BE->>BE: Pydantic model validation fails
+        BE-->>Client: Returns 422 Unprocessable Entity with field details
+    else 429: Rate Limit Exceeded
+        BE->>BE: Rate limit middleware blocks request
+        BE-->>Client: Returns 429 Too Many Requests
+    else 500: Internal Server Error
+        BE->>BE: Service layer encounters an unhandled exception
+        BE->>Logger: 5a. Logs error with full traceback and Request ID
+        BE-->>Client: 5b. Returns standardized 500 JSON Error Response
+    end
+
+    deactivate BE
+    activate Client
+    Client->>Client: 6. Response Interceptor catches non-2xx status
+    Client->>Client: 7. Triggers appropriate global UI action (Toast, Modal)
+    Client-->>FE: 8. Propagates rejected promise
+    deactivate Client
+
+    activate FE
+    FE->>FE: 9. Component-level logic catches error (e.g., TanStack Query's onError)
+    FE->>FE: 10. Updates local UI state (e.g., sets isError=true, form field errors)
+    deactivate FE
+```
+
+### **4. Backend Error Handling**
+
+The backend employs a layered approach, handling specific errors first and relying on a global handler as a final safety net.
+
+#### **4.1. Structured Logging**
+
+To facilitate efficient debugging and monitoring, all logs are written in a structured JSON format. This includes the `requestId` in every log entry associated with a request.
+
+```python
+# apps/api/src/logging_config.py (Conceptual)
+# In a real implementation, a library like structlog would be used.
+# This ensures logs are machine-readable for services like Datadog or ELK.
+
+logger.error(
+    "User creation failed",
+    extra={
+        "request_id": request_id,
+        "user_email": "example@test.com",
+        "error_details": str(exc)
+    }
+)
+```
+
+#### **4.2. Specific Exception Handling**
+
+-   **HTTP 422: Validation Errors**: FastAPI automatically handles Pydantic validation errors. When incoming request data (body, query params) fails validation, FastAPI intercepts it and returns a detailed `422 Unprocessable Entity` response. **No custom code is needed for this.**
+
+-   **HTTP 429: Rate Limiting**: As required by the PRD for AI features, a rate-limiting middleware (e.g., `slowapi`) is applied to sensitive endpoints. When a user exceeds the defined request limit (e.g., 5 requests per 15 minutes), the middleware returns a `429 Too Many Requests` response.
+
+-   **Custom Business Logic Exceptions**: For predictable domain errors (e.g., `EvaluationPeriodClosedError`, `UserNotFoundError`), we define custom exception classes. These are caught at the API route level to return specific `4xx` status codes with clear, user-facing error messages.
+
+    ```python
+    # apps/api/src/routers/evaluations.py
+    from ..services import evaluation_service, exceptions
+
+    @router.post("/")
+    def submit_evaluation(evaluation: EvaluationCreate):
+        try:
+            return evaluation_service.submit(evaluation)
+        except exceptions.EvaluationPeriodClosedError as e:
+            raise HTTPException(
+                status_code=409, # Conflict
+                detail={"code": "EVALUATION_PERIOD_CLOSED", "message": str(e)}
+            )
+    ```
+
+#### **4.3. Global Exception Handler (Safety Net)**
+
+This handler, defined in `apps/api/src/main.py`, catches any unhandled exception. Its sole purpose is to log the catastrophic error and return a generic `500 Internal Server Error` response, preventing any implementation details from leaking.
+
+### **5. Frontend Error Handling**
+
+The frontend uses a combination of a global interceptor for broad categories of errors and component-level logic for specific UI updates.
+
+#### **5.1. Global API Client Interceptor**
+
+The Axios interceptor is the central nervous system for frontend error handling. It is responsible for triggering global, non-contextual UI feedback.
+
+```typescript
+// apps/web/src/lib/apiClient.ts (Revised Response Interceptor)
+// ... imports
+
+apiClient.interceptors.response.use(
+    (response) => response,
+    (error: AxiosError<ApiError>) => {
+        const response = error.response;
+        const errorMessage =
+            response?.data?.error?.message || "An unexpected error occurred.";
+
+        if (response) {
+            switch (response.status) {
+                case 401:
+                    toast.error(
+                        "Your session has expired. Please log in again."
+                    );
+                    // Logic to redirect to /login
+                    break;
+                case 403:
+                    toast.error(
+                        "You don't have permission to perform this action."
+                    );
+                    break;
+                case 409:
+                    // CRITICAL: Aligns with front-end-spec.md for optimistic locking.
+                    // This triggers a global modal, not just a toast.
+                    // The actual implementation would call a Zustand/Redux store action.
+                    showContentOutOfDateModal();
+                    break;
+                case 429:
+                    // CRITICAL: Aligns with PRD rate-limiting requirement.
+                    toast.error(
+                        "You have made too many requests. Please try again later."
+                    );
+                    break;
+                case 503:
+                    toast.error(
+                        "A required service is temporarily unavailable. Please try again."
+                    );
+                    break;
+                // 422 Validation errors are NOT handled here. They are passed down
+                // to the component level for form-specific feedback.
+                default:
+                    if (
+                        response.status >= 400 &&
+                        response.status < 500 &&
+                        response.status !== 422
+                    ) {
+                        toast.error(`Request Error: ${errorMessage}`);
+                    } else if (response.status >= 500) {
+                        toast.error(`Server Error: ${errorMessage}`);
+                    }
+                    break;
+            }
+        } else {
+            toast.error("Network error. Please check your connection.");
+        }
+
+        return Promise.reject(error);
+    }
+);
+```
+
+#### **5.2. Component-Level Error Handling**
+
+For errors that require specific UI changes within a component (e.g., displaying an error message next to a form field), we use the `onError` callbacks provided by our state management library, **TanStack Query**.
+
+```typescript
+// apps/web/src/components/forms/EvaluationForm.tsx
+
+const { mutate, isPending, isError, error } = useMutation({
+    mutationFn: (formData: EvaluationData) => api.submitEvaluation(formData),
+    onSuccess: () => {
+        toast.success("Evaluation submitted successfully!");
+    },
+    onError: (error: AxiosError<ApiError>) => {
+        // This block handles errors specific to this form submission.
+        const responseError = error.response?.data?.error;
+
+        // Handle 422 Validation Errors specifically
+        if (error.response?.status === 422 && responseError?.details) {
+            // 'setError' is a hook from react-hook-form to display
+            // error messages next to the corresponding input fields.
+            Object.entries(responseError.details).forEach(
+                ([field, message]) => {
+                    setError(field as keyof EvaluationData, {
+                        type: "manual",
+                        message: message as string,
+                    });
+                }
+            );
+        }
+        // Other errors are already displayed by the global interceptor's toast.
+    },
+});
+```
+
+---
+
+## **Monitoring and Observability**
+
+This section defines the strategy and tooling for monitoring, logging, and observing the **Proficiency** platform, strictly adhering to the project's self-hosted, open-source technology stack. The primary tools are **Prometheus** for metrics collection and **Grafana** for visualization and alerting.
+
+### **1. Strategy & Core Pillars**
+
+Our strategy is to gain comprehensive insight into our Dockerized application running on a single VPS.
+
+-   **Metrics (The "How Much"):** We will collect detailed, time-series metrics from every component of our application stack to understand performance, resource utilization, and overall system health.
+-   **Logs (The "What"):** We will manage and analyze structured logs generated by the application to debug specific errors and understand the sequence of events during a request.
+-   **Dashboards & Alerting (The "So What"):** We will use a centralized visualization tool to build dashboards for at-a-glance health checks and configure alerts to proactively notify the team of potential issues.
+
+### **2. Tooling & Architecture**
+
+As defined in the `Tech Stack`, our monitoring solution is a self-hosted, containerized stack running alongside the main application.
+
+| Category                  | Technology                | Role & Integration                                                                                                                                                                                                 |
+| :------------------------ | :------------------------ | :----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **Metrics Collection**    | **Prometheus**            | The core of our monitoring system. It will be configured to "scrape" (pull) metrics from various exporters.                                                                                                        |
+| **Metrics Visualization** | **Grafana**               | The primary interface for observability. Grafana will connect to Prometheus as a data source to build dashboards and configure alerts.                                                                             |
+| **Application Logging**   | **Python Logging Module** | The native library will be configured to output structured (JSON) logs to `stdout` from the FastAPI and RQ worker containers.                                                                                      |
+| **Log Management**        | **Docker Logs / `loki`**  | For simplicity, we will initially rely on `docker-compose logs`. For more advanced, centralized log querying, a `loki` service can be added to the Docker Compose stack, which integrates seamlessly with Grafana. |
+
+The monitoring architecture is illustrated below:
+
+```mermaid
+graph TD
+    subgraph "Hostinger VPS"
+        subgraph "Docker Compose"
+            FastAPI -->|/metrics| Prometheus;
+            RQ_Worker -->|/metrics| Prometheus;
+            Caddy -->|/metrics| Prometheus;
+            MariaDB -->|/metrics| Prometheus;
+            Redis -->|/metrics| Prometheus;
+
+            Prometheus -->|Data Source| Grafana;
+
+            FastAPI -->|Logs to stdout| Docker_Logging;
+            RQ_Worker -->|Logs to stdout| Docker_Logging;
+        end
+    end
+
+    Developer -->|Views Dashboards| Grafana;
+```
+
+### **3. Implementation Details**
+
+#### **3.1. Metrics Collection (Prometheus)**
+
+Prometheus will be configured to scrape metrics from the following endpoints exposed by exporters:
+
+-   **FastAPI & RQ Worker:** We will use a client library (e.g., `starlette-prometheus`) to expose an instrumented `/metrics` endpoint. This will provide default metrics like request latency, throughput, and error counts.
+-   **Caddy:** The Caddy reverse proxy has a built-in `/metrics` endpoint that can be enabled.
+-   **MariaDB:** A `mysqld-exporter` container will be added to the Docker Compose stack to query MariaDB stats and expose them to Prometheus.
+-   **Redis:** A `redis-exporter` container will be added to expose Redis metrics.
+-   **Host System:** A `node-exporter` container will be used to gather host-level metrics like CPU, memory, and disk I/O of the VPS itself.
+
+#### **3.2. Logging**
+
+The native Python `logging` module in the FastAPI application and RQ worker will be configured with a `JSONFormatter`. This ensures that all logs written to standard output are structured, making them easy to parse.
+
+**Critical Log Context:** All log entries **must** include `timestamp`, `level`, `message`, and the `request_id` established in our Error Handling Strategy.
+
+#### **3.3. Dashboards (Grafana)**
+
+We will create a primary **System Health Dashboard** in Grafana. Pre-built community dashboards will be used as a starting point where possible. This dashboard will provide a single-pane-of-glass view of:
+
+-   **Host Health:** Overall VPS CPU, Memory, and Disk Usage (from `node-exporter`).
+-   **Application Performance:** API request rate, error rate (4xx/5xx), and p95/p99 response times (from FastAPI).
+-   **Database Performance:** MariaDB query throughput, active connections, and slow query count (from `mysqld-exporter`).
+-   **Cache & Queue Health:** Redis memory usage, hit rate, and RQ queue lengths (from `redis-exporter`).
+
+#### **3.4. Alerting (Grafana)**
+
+Alerts will be configured directly within Grafana using Prometheus as the data source. Alerting rules will be defined to notify a designated team channel (e.g., via a Slack webhook).
+
+| Alert Name                      | Threshold                                                          | Notification | Rationale                                           |
+| :------------------------------ | :----------------------------------------------------------------- | :----------- | :-------------------------------------------------- |
+| **High API Server Error Rate**  | The rate of 5xx responses exceeds 5% over a 5-minute period.       | PagerDuty    | Indicates a critical backend failure.               |
+| **High API Latency**            | The p95 latency for API requests exceeds 2 seconds.                | Slack        | Indicates a performance bottleneck affecting users. |
+| **Host Resource Exhaustion**    | VPS CPU utilization is \> 80% for 10 minutes OR disk space \< 10%. | PagerDuty    | A precursor to system-wide failure.                 |
+| **RQ Job Queue Length**         | The primary job queue length grows beyond 100 pending jobs.        | Slack        | Indicates the background worker is falling behind.  |
+| **High Rate Limit Occurrences** | The rate of 429 responses exceeds 20 per minute.                   | Slack        | Signals potential abuse or a misconfigured client.  |
