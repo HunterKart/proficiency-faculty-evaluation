@@ -12,6 +12,7 @@ N/A - This is a greenfield project. The architecture will be designed from scrat
 
 | Date           | Version | Description                                                                                                                                                                                                                                             | Author                 |
 | :------------- | :------ | :------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ | :--------------------- |
+| **2025-10-09** | **2.3** | **Updated `Deployment Architecture` to include a dedicated staging deployment and E2E testing job in the `ci.yml` configuration. This implements the requirements from the `Testing Strategy`, making E2E tests the final gate before production.**     | **Winston, Architect** |
 | **2025-10-09** | **2.2** | **Completed and consolidated the entire `Testing Strategy` section, incorporating all four groups (Foundational Strategy, Test Organization, Integration Testing, and E2E & Specialized Testing).**                                                     | **Winston, Architect** |
 | **2025-10-09** | **2.1** | **Finalized and consolidated the complete `Security and Performance` section, incorporating both Group 1 (Comprehensive Security Requirements) and Group 2 (Holistic Performance Optimization).**                                                       | **Winston, Architect** |
 | **2025-10-08** | **2.0** | **Completed and consolidated the entire `Deployment Architecture` section, defining the strategy, CI/CD pipeline, and environments.**                                                                                                                   | **Winston, Architect** |
@@ -7053,40 +7054,33 @@ This group defines the practical, step-by-step process for how our frontend and 
 The frontend application is a static build of our React SPA, served directly to users by our Caddy web server.
 
 -   **Platform:** **Caddy Server**, running within a Docker container on the production VPS.
--   **Build Command:** From the monorepo root, the static assets will be generated using the Vite build command, targeting the `web` workspace:
-    ```bash
-    pnpm --filter web build
-    ```
--   **Output Directory:** The build process will generate all static HTML, CSS, and JavaScript assets into the `apps/web/dist` directory. This directory will be mounted as a volume into the Caddy container.
--   **CDN/Edge Strategy:** For our single-VPS architecture, the **Caddy server itself will act as our edge layer**. It will be configured to serve the static assets from the output directory with optimal caching headers and will also handle automatic HTTPS encryption.
+-   **Build Command:** `pnpm --filter web build`
+-   **Output Directory:** The build generates static assets into `apps/web/dist`, which is mounted as a volume into the Caddy container.
+-   **CDN/Edge Strategy:** For our single-VPS architecture, the **Caddy server itself will act as our edge layer**, handling asset serving, optimal caching headers, and automatic HTTPS encryption.
 
 #### **Backend Deployment**
 
-The backend is our monolithic FastAPI application, which runs as a containerized service managed by Docker Compose.
+The backend is our monolithic FastAPI application, run as a containerized service managed by Docker Compose.
 
 -   **Platform:** **Docker Container** on the production VPS, orchestrated by Docker Compose.
--   **Build Command:** The production image for the API is built using Docker Compose, which follows the instructions in its `Dockerfile`. The command is:
-    ```bash
-    docker-compose build api
-    ```
--   **Deployment Method:** The FastAPI application is run via `uvicorn` inside the container. The `docker-compose up` command starts this container, along with all other dependent services (`db`, `redis`, `worker`), and manages its lifecycle. The Caddy server is configured to reverse-proxy all incoming requests for `/api/*` to this running `api` container.
+-   **Build Command:** `docker-compose build api`
+-   **Deployment Method:** The FastAPI application is run via `uvicorn` inside the container. The `docker-compose up` command starts this container along with dependent services (`db`, `redis`, `worker`). Caddy is configured to reverse-proxy `/api/*` requests to this `api` container.
 
 ---
 
 ### **Group 2: CI/CD Pipeline**
 
-To automate the build, test, and deployment lifecycle, we will use **GitHub Actions**, as specified in our Tech Stack. The pipeline is divided into two primary jobs: `ci` for continuous integration and `deploy` for continuous deployment. This ensures that code is only deployed to production after passing all quality checks, fulfilling the requirement from Story 1.1 of our PRD for an automated pipeline.
+We will use **GitHub Actions** to automate the build, test, and deployment lifecycle. The pipeline is now divided into four primary jobs: `ci`, `deploy_staging`, `e2e_tests`, and `deploy_production`. This enhanced flow ensures that code is only promoted after passing all unit, integration, and end-to-end tests in a live-like environment.
 
-The entire workflow will be defined in a file located at `.github/workflows/ci.yml` within our monorepo.
+The entire workflow is defined in `.github/workflows/ci.yml`.
 
 #### **Conceptual CI/CD Pipeline Configuration (`ci.yml`)**
 
-This configuration serves as the definitive blueprint for our GitHub Actions workflow.
+This configuration is the definitive blueprint for our GitHub Actions workflow, now updated to include the E2E testing gate.
 
 ```yaml
 name: Continuous Integration & Deployment
 
-# This workflow runs on pushes and pull requests to the main branch.
 on:
     push:
         branches: [main]
@@ -7095,72 +7089,94 @@ on:
 
 jobs:
     # ----------------------------------------------------
-    # JOB 1: Continuous Integration (Build & Test)
+    # JOB 1: Continuous Integration (Build & Unit/Integration Tests)
     # ----------------------------------------------------
     ci:
         name: Build & Test
         runs-on: ubuntu-latest
-
         steps:
-            - name: Checkout Repository
-              uses: actions/checkout@v4
-
-            - name: Set up pnpm
-              uses: pnpm/action-setup@v2
-              with:
-                  version: 8
-
-            - name: Set up Node.js
-              uses: actions/setup-node@v4
-              with:
-                  node-version: "20.x"
-                  cache: "pnpm"
-
-            - name: Set up Python
-              uses: actions/setup-python@v5
-              with:
-                  python-version: "3.12"
-
-            - name: Install Frontend Dependencies
-              run: pnpm install --frozen-lockfile
-
-            - name: Install Backend Dependencies
-              run: pip install -r apps/api/requirements.txt
-
+            - uses: actions/checkout@v4
+            - uses: pnpm/action-setup@v2
+              with: { version: 8 }
+            - uses: actions/setup-node@v4
+              with: { node-version: "20.x", cache: "pnpm" }
+            - uses: actions/setup-python@v5
+              with: { python-version: "3.12" }
+            - name: Install Dependencies
+              run: |
+                  pnpm install --frozen-lockfile
+                  pip install -r apps/api/requirements.txt
             - name: Lint Code
               run: pnpm lint
-
-            - name: Run Frontend Tests
-              run: pnpm --filter web test
-
-            - name: Run Backend Tests
-              run: pnpm --filter api test
-
+            - name: Run Unit & Integration Tests
+              run: |
+                  pnpm --filter web test
+                  pnpm --filter api test
             - name: Verify Docker Build
               run: docker-compose build
 
     # ----------------------------------------------------
-    # JOB 2: Continuous Deployment (Deploy to Production)
+    # JOB 2: Deploy to Staging Environment
     # ----------------------------------------------------
-    deploy:
+    deploy_staging:
+        name: Deploy to Staging
+        needs: ci
+        runs-on: ubuntu-latest
+        steps:
+            - uses: webfactory/ssh-agent@v0.9.0
+              with:
+                  ssh-private-key: ${{ secrets.STAGING_SSH_PRIVATE_KEY }}
+            - name: Add Server to Known Hosts
+              run: ssh-keyscan -H ${{ secrets.STAGING_SSH_HOST }} >> ~/.ssh/known_hosts
+            - name: Deploy to Staging Server
+              run: |
+                  ssh ${{ secrets.STAGING_SSH_USER }}@${{ secrets.STAGING_SSH_HOST }} '
+                    cd /path/to/prof-evaluation-app && \
+                    git pull origin main && \
+                    docker-compose -f docker-compose.yml -f docker-compose.staging.yml down && \
+                    docker-compose -f docker-compose.yml -f docker-compose.staging.yml up --build -d && \
+                    docker-compose exec api alembic upgrade head
+                  '
+
+    # ----------------------------------------------------
+    # JOB 3: Run End-to-End Tests
+    # ----------------------------------------------------
+    e2e_tests:
+        name: Run End-to-End Tests
+        needs: deploy_staging
+        runs-on: ubuntu-latest
+        steps:
+            - uses: actions/checkout@v4
+            - uses: pnpm/action-setup@v2
+              with: { version: 8 }
+            - uses: actions/setup-node@v4
+              with: { node-version: "20.x", cache: "pnpm" }
+            - name: Install Frontend Dependencies
+              run: pnpm install --frozen-lockfile
+            - name: Install Cypress
+              run: pnpm --filter web exec cypress install
+            - name: Run Cypress E2E Suite (with Accessibility Checks)
+              run: pnpm --filter web exec cypress run --browser chrome
+              env:
+                  CYPRESS_BASE_URL: https://staging.proficiency-app.com
+
+    # ----------------------------------------------------
+    # JOB 4: Deploy to Production
+    # ----------------------------------------------------
+    deploy_production:
         name: Deploy to Production
-        needs: ci # This job only runs if the 'ci' job succeeds.
-        # This condition ensures deployment only happens on a direct push to the main branch.
+        needs: e2e_tests
         if: github.ref == 'refs/heads/main' && github.event_name == 'push'
         runs-on: ubuntu-latest
-
         steps:
-            - name: Configure SSH
-              uses: webfactory/ssh-agent@v0.9.0
+            - uses: webfactory/ssh-agent@v0.9.0
               with:
-                  ssh-private-key: ${{ secrets.SSH_PRIVATE_KEY }}
-
+                  ssh-private-key: ${{ secrets.PROD_SSH_PRIVATE_KEY }}
             - name: Add Server to Known Hosts
-              run: ssh-keyscan -H ${{ secrets.SSH_HOST }} >> ~/.ssh/known_hosts
-
-            - name: Deploy to Server
+              run: ssh-keyscan -H ${{ secrets.PROD_SSH_HOST }} >> ~/.ssh/known_hosts
+            - name: Deploy to Production Server
               run: |
-                  ssh ${{ secrets.SSH_USER }}@${{ secrets.SSH_HOST }} '
+                  ssh ${{ secrets.PROD_SSH_USER }}@${{ secrets.PROD_SSH_HOST }} '
                     cd /path/to/prof-evaluation-app && \
                     git pull origin main && \
                     docker-compose down && \
@@ -7172,14 +7188,10 @@ jobs:
 
 #### **Key Principles & Secrets Management**
 
--   **Automation Trigger:** The workflow is automatically triggered on any `push` or `pull_request` to the `main` branch. This ensures that every proposed change is validated before it can be merged.
--   **Job Dependency:** The `deploy` job is configured with `needs: ci`, creating a dependency that prevents deployment unless all linting, testing, and build verification steps in the `ci` job have passed successfully. This is a critical quality gate.
--   **Secrets Management:** All sensitive information required for deployment is managed securely using **GitHub Repository Secrets**. This includes:
-    -   `SSH_PRIVATE_KEY`: The private SSH key used to access the production VPS.
-    -   `SSH_HOST`: The IP address or domain name of the VPS.
-    -   `SSH_USER`: The username for connecting to the VPS.
-    -   All production `.env` variables (like `GEMINI_API_KEY`, `DB_PASSWORD`, etc.) will also be stored as GitHub secrets and passed to the `docker-compose up` command during deployment. **Secrets are never stored in the repository code.**
--   **Idempotent Deployment Script:** The deployment command sequence is idempotent, meaning it can be run multiple times with the same outcome. It pulls the latest code, rebuilds and restarts the necessary containers, applies database migrations, and cleans up old resources, ensuring the server is always in the correct state after a successful run.
+-   **Automation Trigger:** The workflow triggers on any `push` or `pull_request` to the `main` branch.
+-   **Job Dependency:** The pipeline now follows a strict, sequential dependency: `ci` -\> `deploy_staging` -\> `e2e_tests` -\> `deploy_production`. A failure at any stage prevents promotion to the next.
+-   **E2E Testing Gate:** The `e2e_tests` job is now a mandatory quality gate. Production deployment can only occur after all Cypress tests (including accessibility checks) have passed against the live staging environment.
+-   **Secrets Management:** Secrets are managed via GitHub Repository Secrets. The secret names have been updated to be environment-specific (e.g., `STAGING_SSH_HOST`, `PROD_SSH_HOST`) to support the multi-stage pipeline.
 
 ---
 
@@ -7194,6 +7206,8 @@ To ensure a stable and predictable path from development to release, the **Profi
 | **Production**  | `https://app.proficiency-app.com`     | `https://app.proficiency-app.com/api/v1`     | The live environment accessible to all end-users.                                                                                    |
 
 ---
+
+## Security and Performance
 
 ### **Group 1: Comprehensive Security Requirements**
 

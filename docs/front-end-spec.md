@@ -32,6 +32,7 @@ The interface must feel clean, trustworthy, and represent a significant upgrade 
 
 | Date       | Version | Description                                                                                                                                                                                                                                         | Author           |
 | :--------- | :------ | :-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | :--------------- |
+| 2025-10-09 | 3.8     | Enhanced the 'Testing Strategy' in the Accessibility section to include the integration of `cypress-axe` for automated WCAG validation within the E2E test suite, as per the architect's handoff.                                                   | Sally, UX Expert |
 | 2025-10-08 | 3.7     | **Final data model alignment pass.** Refined the `CommentViewerDialog` component specification to source its anonymity threshold from the new `UniversitySetting` data model, ensuring full architectural consistency.                              | Sally, UX Expert |
 | 2025-10-08 | 3.6     | **Refined UI/UX spec to align with the final, approved data models.** Updated the Job Monitor flow to include a diagnostic view for failed jobs and expanded the Notification Panel component spec to align with the new `Notification` data model. | Sally, UX Expert |
 | 2025-10-08 | 3.5     | Added UI/UX for handling the `413 Payload Too Large` error in the Report Center, guiding users to refine overly broad report requests.                                                                                                              | Sally, UX Expert |
@@ -1046,9 +1047,12 @@ Our official accessibility target for the Proficiency platform is **WCAG 2.1 Lev
 
 #### **Testing Strategy**
 
-1.  **Automated Scans During Development:** We will integrate an automated accessibility testing library (like `@axe-core/react`) into our development process.
-2.  **Manual Keyboard Navigation Testing:** Before any new feature is considered complete, it must be tested for usability with only a keyboard.
-3.  **Basic Screen Reader Spot-Checks:** For critical user flows, we will perform a brief spot-check using a built-in screen reader (like VoiceOver or NVDA).
+Our testing strategy is layered to catch accessibility issues at multiple stages of the development process.
+
+1.  **Automated Scans During Development:** We will integrate an automated accessibility testing library (like `@axe-core/react`) into our local development process to provide immediate feedback to developers as they build components.
+2.  **Automated E2E Validation:** We will integrate `cypress-axe` into our end-to-end test suite. This will automatically validate all critical user flows against WCAG 2.1 Level AA standards as part of our CI/CD pipeline, enforcing compliance before new code can be merged and deployed.
+3.  **Manual Keyboard Navigation Testing:** Before any new feature is considered complete, it must be tested for usability with only a keyboard.
+4.  **Basic Screen Reader Spot-Checks:** For critical user flows, we will perform a brief spot-check using a built-in screen reader (like VoiceOver or NVDA).
 
 ---
 

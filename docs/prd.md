@@ -22,6 +22,7 @@ Existing faculty evaluation systems, particularly within the Philippines and at 
 
 | Date           | Version | Description                                                                                                                                                        | Author       |
 | :------------- | :------ | :----------------------------------------------------------------------------------------------------------------------------------------------------------------- | :----------- |
+| **2025-10-09** | **8.2** | **Added NFR14 to formalize automated WCAG accessibility testing on every pull request, as defined in the final architecture.**                                     | **John, PM** |
 | **2025-10-08** | **8.1** | **Refined Story 3.1 to include an admin interface for managing new university-specific settings, aligning with the `UniversitySetting` data model.**               | **John, PM** |
 | **2025-10-08** | **8.0** | **Updated NFR2 and NFR11 to explicitly state that score weights and integrity thresholds are now configurable via the `UniversitySetting` model, not hard-coded.** | **John, PM** |
 | 2025-10-08     | 7.9     | Refined Story 2.2 and 5.6 to align with the finalized `BackgroundTask` and `GeneratedReport` data models from the architectural specification.                     | John, PM     |
@@ -128,6 +129,7 @@ Existing faculty evaluation systems, particularly within the Philippines and at 
     -   Crucially, the thresholds for these checks (e.g., similarity percentage for recycled content) must be configurable on a per-university basis via the `university_settings` table. This ensures that administrators can fine-tune the engine's sensitivity to match their institution's specific academic standards.
 -   **NFR12: Configurable Rate Limiting:** To ensure system stability and control operational costs, the system **must implement rate-limiting** for resource-intensive features, specifically the **AI Assistant (Story 6.2)** and **Report Generation (Story 5.6)**. The thresholds for these limits **must be stored as configurable values** in the `UniversitySetting` table and **must not be hardcoded**. Default values will be seeded for V1, and a UI for Admins to manage these settings is deferred to a post-V1 release.
 -   **NFR13: Administrative Auditing**: All critical, state-changing actions performed by an administrator related to the evaluation lifecycle (including creating, updating, activating, or archiving form templates, and scheduling or cancelling evaluation periods) must generate a detailed entry in the system's audit log. The log must record the administrator who performed the action, the action taken, the target entity, and a timestamp.
+-   **NFR14: Automated Accessibility Compliance Testing**: To ensure adherence to WCAG standards, the CI/CD pipeline must include an automated accessibility test using `cypress-axe` on every pull request. This test must be configured to prevent merging code that introduces accessibility violations.
 
 ---
 
