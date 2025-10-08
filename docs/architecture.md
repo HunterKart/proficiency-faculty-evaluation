@@ -12,6 +12,7 @@ N/A - This is a greenfield project. The architecture will be designed from scrat
 
 | Date           | Version | Description                                                                                                                                                                                                                                             | Author                 |
 | :------------- | :------ | :------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ | :--------------------- |
+| **2025-10-08** | **2.0** | **Completed and consolidated the entire `Deployment Architecture` section, defining the strategy, CI/CD pipeline, and environments.**                                                                                                                   | **Winston, Architect** |
 | 2025-10-08     | 1.9     | **Finalized and consolidated the complete `Development Workflow` section, incorporating all three groups (Foundational Setup, Core Commands, and Environment Configuration) into a single, definitive guide.**                                          | **Winston, Architect** |
 | **2025-10-08** | **1.8** | **Finalized and consolidated the complete `Unified Project Structure` section, incorporating all five structural groups into a single, comprehensive blueprint.**                                                                                       | **Winston, Architect** |
 | **2025-10-08** | **1.7** | **Completed the entire `Backend Architecture` section, defining the service structure, data access layer, security model, asynchronous worker patterns, error handling, and testing strategy.**                                                         | **Winston, Architect** |
@@ -7032,3 +7033,160 @@ The single root `.env` file provides configuration to all services orchestrated 
 
 **Note on Frontend Variables:**
 In our Docker Compose setup, the Caddy server (`web` service) acts as a reverse proxy, serving the frontend and forwarding API requests from the same origin. Therefore, the frontend application does not require a `VITE_API_URL` environment variable for local development, as all API calls are relative paths (e.g., `/api/v1/...`).
+
+---
+
+## **Deployment Architecture**
+
+This section outlines the comprehensive strategy for deploying the **Proficiency** application to our production environment. It covers the specific methods for building and running both the frontend and backend services, the automated pipeline for continuous integration and deployment, and the definition of our application environments. The entire strategy is centered on our foundational architectural decision to use **Docker Compose** on a **single VPS**, ensuring a simple, manageable, and cost-effective deployment for Version 1.
+
+---
+
+### **Group 1: Deployment Strategy**
+
+This group defines the practical, step-by-step process for how our frontend and backend applications are built and run in the production environment.
+
+#### **Frontend Deployment**
+
+The frontend application is a static build of our React SPA, served directly to users by our Caddy web server.
+
+-   **Platform:** **Caddy Server**, running within a Docker container on the production VPS.
+-   **Build Command:** From the monorepo root, the static assets will be generated using the Vite build command, targeting the `web` workspace:
+    ```bash
+    pnpm --filter web build
+    ```
+-   **Output Directory:** The build process will generate all static HTML, CSS, and JavaScript assets into the `apps/web/dist` directory. This directory will be mounted as a volume into the Caddy container.
+-   **CDN/Edge Strategy:** For our single-VPS architecture, the **Caddy server itself will act as our edge layer**. It will be configured to serve the static assets from the output directory with optimal caching headers and will also handle automatic HTTPS encryption.
+
+#### **Backend Deployment**
+
+The backend is our monolithic FastAPI application, which runs as a containerized service managed by Docker Compose.
+
+-   **Platform:** **Docker Container** on the production VPS, orchestrated by Docker Compose.
+-   **Build Command:** The production image for the API is built using Docker Compose, which follows the instructions in its `Dockerfile`. The command is:
+    ```bash
+    docker-compose build api
+    ```
+-   **Deployment Method:** The FastAPI application is run via `uvicorn` inside the container. The `docker-compose up` command starts this container, along with all other dependent services (`db`, `redis`, `worker`), and manages its lifecycle. The Caddy server is configured to reverse-proxy all incoming requests for `/api/*` to this running `api` container.
+
+---
+
+### **Group 2: CI/CD Pipeline**
+
+To automate the build, test, and deployment lifecycle, we will use **GitHub Actions**, as specified in our Tech Stack. The pipeline is divided into two primary jobs: `ci` for continuous integration and `deploy` for continuous deployment. This ensures that code is only deployed to production after passing all quality checks, fulfilling the requirement from Story 1.1 of our PRD for an automated pipeline.
+
+The entire workflow will be defined in a file located at `.github/workflows/ci.yml` within our monorepo.
+
+#### **Conceptual CI/CD Pipeline Configuration (`ci.yml`)**
+
+This configuration serves as the definitive blueprint for our GitHub Actions workflow.
+
+```yaml
+name: Continuous Integration & Deployment
+
+# This workflow runs on pushes and pull requests to the main branch.
+on:
+    push:
+        branches: [main]
+    pull_request:
+        branches: [main]
+
+jobs:
+    # ----------------------------------------------------
+    # JOB 1: Continuous Integration (Build & Test)
+    # ----------------------------------------------------
+    ci:
+        name: Build & Test
+        runs-on: ubuntu-latest
+
+        steps:
+            - name: Checkout Repository
+              uses: actions/checkout@v4
+
+            - name: Set up pnpm
+              uses: pnpm/action-setup@v2
+              with:
+                  version: 8
+
+            - name: Set up Node.js
+              uses: actions/setup-node@v4
+              with:
+                  node-version: "20.x"
+                  cache: "pnpm"
+
+            - name: Set up Python
+              uses: actions/setup-python@v5
+              with:
+                  python-version: "3.12"
+
+            - name: Install Frontend Dependencies
+              run: pnpm install --frozen-lockfile
+
+            - name: Install Backend Dependencies
+              run: pip install -r apps/api/requirements.txt
+
+            - name: Lint Code
+              run: pnpm lint
+
+            - name: Run Frontend Tests
+              run: pnpm --filter web test
+
+            - name: Run Backend Tests
+              run: pnpm --filter api test
+
+            - name: Verify Docker Build
+              run: docker-compose build
+
+    # ----------------------------------------------------
+    # JOB 2: Continuous Deployment (Deploy to Production)
+    # ----------------------------------------------------
+    deploy:
+        name: Deploy to Production
+        needs: ci # This job only runs if the 'ci' job succeeds.
+        # This condition ensures deployment only happens on a direct push to the main branch.
+        if: github.ref == 'refs/heads/main' && github.event_name == 'push'
+        runs-on: ubuntu-latest
+
+        steps:
+            - name: Configure SSH
+              uses: webfactory/ssh-agent@v0.9.0
+              with:
+                  ssh-private-key: ${{ secrets.SSH_PRIVATE_KEY }}
+
+            - name: Add Server to Known Hosts
+              run: ssh-keyscan -H ${{ secrets.SSH_HOST }} >> ~/.ssh/known_hosts
+
+            - name: Deploy to Server
+              run: |
+                  ssh ${{ secrets.SSH_USER }}@${{ secrets.SSH_HOST }} '
+                    cd /path/to/prof-evaluation-app && \
+                    git pull origin main && \
+                    docker-compose down && \
+                    docker-compose up --build -d && \
+                    docker-compose exec api alembic upgrade head && \
+                    docker system prune -af
+                  '
+```
+
+#### **Key Principles & Secrets Management**
+
+-   **Automation Trigger:** The workflow is automatically triggered on any `push` or `pull_request` to the `main` branch. This ensures that every proposed change is validated before it can be merged.
+-   **Job Dependency:** The `deploy` job is configured with `needs: ci`, creating a dependency that prevents deployment unless all linting, testing, and build verification steps in the `ci` job have passed successfully. This is a critical quality gate.
+-   **Secrets Management:** All sensitive information required for deployment is managed securely using **GitHub Repository Secrets**. This includes:
+    -   `SSH_PRIVATE_KEY`: The private SSH key used to access the production VPS.
+    -   `SSH_HOST`: The IP address or domain name of the VPS.
+    -   `SSH_USER`: The username for connecting to the VPS.
+    -   All production `.env` variables (like `GEMINI_API_KEY`, `DB_PASSWORD`, etc.) will also be stored as GitHub secrets and passed to the `docker-compose up` command during deployment. **Secrets are never stored in the repository code.**
+-   **Idempotent Deployment Script:** The deployment command sequence is idempotent, meaning it can be run multiple times with the same outcome. It pulls the latest code, rebuilds and restarts the necessary containers, applies database migrations, and cleans up old resources, ensuring the server is always in the correct state after a successful run.
+
+---
+
+### **Group 3: Environments**
+
+To ensure a stable and predictable path from development to release, the **Proficiency** platform will utilize three distinct environments. Each environment is isolated and serves a specific purpose in our development and deployment workflow.
+
+| Environment     | Frontend URL                          | Backend URL                                  | Purpose                                                                                                                              |
+| :-------------- | :------------------------------------ | :------------------------------------------- | :----------------------------------------------------------------------------------------------------------------------------------- |
+| **Development** | `http://localhost:5173`               | `http://localhost/api/v1`                    | Local development and rapid iteration by developers on their individual machines.                                                    |
+| **Staging**     | `https://staging.proficiency-app.com` | `https://staging.proficiency-app.com/api/v1` | A production-like environment for final testing, user acceptance testing (UAT), and stakeholder reviews before a production release. |
+| **Production**  | `https://app.proficiency-app.com`     | `https://app.proficiency-app.com/api/v1`     | The live environment accessible to all end-users.                                                                                    |
