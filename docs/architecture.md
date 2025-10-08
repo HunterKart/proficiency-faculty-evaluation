@@ -7951,7 +7951,7 @@ A single, consistent naming strategy is crucial for a project's long-term readab
 | SQLAlchemy Models             | `PascalCase`          | `class User(Base):`, `class Evaluation(Base):`           |
 | Test Files                    | `test_snake_case.py`  | `test_evaluation_service.py`                             |
 | Test Functions                | `test_...`            | `def test_submit_evaluation_success():`                  |
-| **Database (PostgreSQL)**     |                       |                                                          |
+| **Database (MySQL/MariaDB)**  |                       |                                                          |
 | Tables                        | `plural_snake_case`   | `users`, `evaluation_forms`, `assessment_periods`        |
 | Columns                       | `snake_case`          | `first_name`, `is_active`, `created_at`                  |
 | Primary Keys                  | `id`                  | `id`                                                     |
