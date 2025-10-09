@@ -45,7 +45,7 @@ Available endpoints:
 - Frontend: http://localhost:3000
 - API: http://localhost:8000 (proxy available at `/api` on port 3000)
 - Redis: `localhost:6379`
-- MariaDB: `localhost:3306`
+- MariaDB: `localhost:3307`
 
 Shutdown the stack with `docker-compose down`.
 

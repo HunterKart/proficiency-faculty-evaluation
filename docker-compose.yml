@@ -10,7 +10,7 @@ services:
       MARIADB_PASSWORD: proficiency
       MARIADB_ROOT_PASSWORD: proficiency
     ports:
-      - "3306:3306"
+      - "3307:3306"
     volumes:
       - db_data:/var/lib/mysql
 
