@@ -1,8 +1,6 @@
-import { config } from "../lib/config";
+import { healthResponseSchema, type HealthResponse } from "@proficiency/shared-types";
 
-export type HealthResponse = {
-  status: string;
-};
+import { config } from "../lib/config";
 
 export async function getHealth(): Promise<HealthResponse> {
   const response = await fetch(`${config.apiBaseUrl}/health`);
@@ -11,5 +9,7 @@ export async function getHealth(): Promise<HealthResponse> {
     throw new Error(`Health check failed with status ${response.status}`);
   }
 
-  return response.json() as Promise<HealthResponse>;
+  const payload = await response.json();
+
+  return healthResponseSchema.parse(payload);
 }

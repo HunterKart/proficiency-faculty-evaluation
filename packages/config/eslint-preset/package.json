@@ -1,0 +1,20 @@
+{
+  "name": "@proficiency/eslint-config",
+  "version": "0.0.1",
+  "private": true,
+  "type": "module",
+  "exports": {
+    ".": {
+      "default": "./index.js"
+    }
+  },
+  "dependencies": {
+    "eslint-plugin-react-dom": "^1.5.22",
+    "eslint-plugin-react-x": "^1.13.3",
+    "typescript-eslint": "^8.10.0"
+  },
+  "peerDependencies": {
+    "eslint": "^9.9.0",
+    "typescript-eslint": "^8.0.0"
+  }
+}

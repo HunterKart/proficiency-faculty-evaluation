@@ -1,0 +1,10 @@
+{
+  "name": "@proficiency/tsconfig",
+  "version": "0.0.1",
+  "private": true,
+  "type": "module",
+  "exports": {
+    "./react-library": "./react-library.json",
+    "./node": "./node.json"
+  }
+}

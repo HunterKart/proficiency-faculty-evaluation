@@ -1,0 +1,19 @@
+{
+  "extends": "../config/tsconfig/react-library.json",
+  "compilerOptions": {
+    "target": "ES2021",
+    "module": "ESNext",
+    "moduleResolution": "Bundler",
+    "strict": true,
+    "jsx": "react-jsx",
+    "esModuleInterop": true,
+    "skipLibCheck": true,
+    "forceConsistentCasingInFileNames": true,
+    "declaration": true,
+    "emitDeclarationOnly": true,
+    "declarationDir": "dist/types",
+    "outDir": "dist",
+    "rootDir": "src"
+  },
+  "include": ["src/**/*.{ts,tsx}"]
+}

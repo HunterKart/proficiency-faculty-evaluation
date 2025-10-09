@@ -1,6 +1,7 @@
 from fastapi import FastAPI
 
 from .api import router as api_router
+from .schemas import HealthResponse
 
 app = FastAPI(
     title="Proficiency API",
@@ -11,9 +12,9 @@ app = FastAPI(
 
 
 @app.get("/health", tags=["Health"])
-async def read_health() -> dict[str, str]:
+async def read_health() -> HealthResponse:
     """Basic health endpoint used for readiness probes."""
-    return {"status": "ok"}
+    return HealthResponse(status="ok")
 
 
 app.include_router(api_router, prefix="/api")

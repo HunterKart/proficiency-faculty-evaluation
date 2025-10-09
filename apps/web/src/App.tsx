@@ -1,3 +1,4 @@
+import { Button } from "@proficiency/ui";
 import { useQuery } from "@tanstack/react-query";
 
 import { getHealth } from "./services/healthService";
@@ -15,6 +16,9 @@ function App() {
         <p className="text-sm text-slate-300">
           Full-stack workspace scaffolding is ready to customize.
         </p>
+        <div className="flex justify-center">
+          <Button variant="outline">Primary Action</Button>
+        </div>
         {isLoading && <p>Checking service health…</p>}
         {error && (
           <p className="text-red-400">
