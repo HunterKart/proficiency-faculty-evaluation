@@ -1,6 +1,46 @@
-# BMAD (local only)
-.venv
+# Environment files
 .env
-# BMAD (local only)
-# BMAD (local only)
-# BMAD (local only)
+.env.local
+.env.development
+.env.production
+.env.test
+!.env.example
+
+# Virtual environments
+.venv/
+venv/
+env/
+
+# Node dependencies
+node_modules/
+**/node_modules/
+
+# Python cache and artifacts
+__pycache__/
+*.py[cod]
+*.pyo
+.pytest_cache/
+**/.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+
+# Tooling and IDE
+.vscode/
+.idea/
+.python-version
+
+# Build output
+dist/
+build/
+coverage/
+htmlcov/
+.coverage
+.coverage.*
+
+# Logs
+*.log
+pnpm-debug.log
+
+# OS files
+.DS_Store
+Thumbs.db
