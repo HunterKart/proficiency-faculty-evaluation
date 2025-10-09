@@ -7,7 +7,8 @@ export default defineConfig({
   plugins: [react(), tailwindcss()],
   resolve: {
     alias: {
-      "@proficiency/ui": fileURLToPath(new URL("../../packages/ui/src", import.meta.url))
+      "@proficiency/ui": fileURLToPath(new URL("../../packages/ui/src", import.meta.url)),
+      "@proficiency/shared-types": fileURLToPath(new URL("../../packages/shared-types/src", import.meta.url))
     }
   },
   server: {

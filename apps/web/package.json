@@ -13,6 +13,7 @@
   "dependencies": {
     "@proficiency/ui": "workspace:*",
     "@hookform/resolvers": "^3.9.0",
+    "@proficiency/shared-types": "workspace:*",
     "@tanstack/react-query": "^5.50.0",
     "class-variance-authority": "^0.7.0",
     "clsx": "^2.1.1",
