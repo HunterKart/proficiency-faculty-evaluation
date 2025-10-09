@@ -12,6 +12,9 @@ importers:
 
   apps/web:
     dependencies:
+      '@proficiency/ui':
+        specifier: workspace:*
+        version: link:../../packages/ui
       '@hookform/resolvers':
         specifier: ^3.9.0
         version: 3.10.0(react-hook-form@7.64.0(react@19.2.0))
