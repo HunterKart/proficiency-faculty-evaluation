@@ -18,10 +18,10 @@
     "jsx": "react-jsx",
     "baseUrl": ".",
     "paths": {
-      "@proficiency/shared-types": ["../packages/shared-types/src"],
-      "@proficiency/shared-types/*": ["../packages/shared-types/src/*"],
-      "@proficiency/ui": ["../packages/ui/src"],
-      "@proficiency/ui/*": ["../packages/ui/src/*"]
+      "@proficiency/shared-types": ["../../packages/shared-types/src"],
+      "@proficiency/shared-types/*": ["../../packages/shared-types/src/*"],
+      "@proficiency/ui": ["../../packages/ui/src"],
+      "@proficiency/ui/*": ["../../packages/ui/src/*"]
     }
   },
   "include": ["src"],
