@@ -215,10 +215,12 @@ The architecture will be a **simple monolith** consisting of a single FastAPI ba
     3.  A placeholder React/TypeScript application for the frontend is created within the monorepo.
     4.  A `docker-compose.yml` file is created to run the API, frontend, worker, and database services for local development.
     5.  A basic CI/CD pipeline is configured in the repository to run linters and placeholder tests on commit.
+    6.  A comprehensive `README.md` file is created at the project root, containing the project title, a brief description, and clear instructions on how to run the local development environment.
 
 **Story 1.2: Database and AI Environment Setup**
 
 -   **As a** Super Admin/Developer, **I want** the database schema to be initialized and the AI model environment to be prepared, **so that** the core data structures are in place and future AI-related development is streamlined.
+-   **Depends on:** Story 1.1
 -   **Acceptance Criteria:**
     1.  A database migration tool is integrated into the backend service.
     2.  An initial migration script is created that generates all necessary tables as defined/referenced in the `architecture.md` within the Data Model and Database Schema sections.
@@ -228,6 +230,7 @@ The architecture will be a **simple monolith** consisting of a single FastAPI ba
 **Story 1.3: Super Admin Authentication**
 
 -   **As a** Super Admin, **I want** to securely log in to a dedicated super admin dashboard, **so that** I can manage the platform.
+-   **Depends on:** Story 1.2
 -   **Acceptance Criteria:**
     1.  A login form is available for Super Admins.
     2.  The system authenticates credentials against the `super_admins` table.
@@ -239,6 +242,7 @@ The architecture will be a **simple monolith** consisting of a single FastAPI ba
 **Story 1.4: University Registration Request Submission**
 
 -   **As an** incoming University Admin, **I want** to submit a registration request with my university's details and supporting documents, **so that** our institution can be onboarded to the Proficiency platform.
+-   **Depends on:** Story 1.1
 -   **Acceptance Criteria:**
     1.  A public-facing registration form is available on the application's landing page.
     2.  The form must capture all required institutional and contact person details as specified in the `university_registration_requests` table.
@@ -248,6 +252,7 @@ The architecture will be a **simple monolith** consisting of a single FastAPI ba
 **Story 1.5: University Request Review Workflow**
 
 -   **As a** Super Admin, **I want** to view and manage a queue of pending university registration requests, **so that** I can approve or reject new institutions.
+-   **Depends on:** Story 1.4
 -   **Acceptance Criteria:**
     1.  The initial Super Admin dashboard must display summary cards for 'Active Universities,' 'Total Users,' and 'Pending Requests'.
     2.  The main component of the dashboard is an interface for managing requests through distinct stages: 'New', 'In Review', and 'Resolved'.
@@ -260,6 +265,7 @@ The architecture will be a **simple monolith** consisting of a single FastAPI ba
 **Story 1.6a: Bulk Import Validation & Feedback**
 
 -   **As an** Admin or Super Admin, **I want** to upload a user CSV file and receive clear validation feedback, **so that** I know if my file is correctly formatted before processing.
+-   **Depends on:** Story 1.3, Story 1.5
 -   **Acceptance Criteria:**
     1.  The **Admin dashboard** and the **Super Admin dashboard** must have an interface for uploading a user data file for a specific university.
     2.  A downloadable CSV/Excel template is provided to ensure correct data format.
@@ -269,6 +275,7 @@ The architecture will be a **simple monolith** consisting of a single FastAPI ba
 **Story 1.6b: Asynchronous Import Processing**
 
 -   **As an** Admin or Super Admin, **I want** a validated user CSV file to be processed as a background job, **so that** the import doesn't time out or degrade system performance.
+-   **Depends on:** Story 1.6a
 -   **Acceptance Criteria:**
     1.  After a file is successfully validated, the Admin or Super Admin can initiate the import process.
     2.  The import runs as an asynchronous job using the RQ worker.
@@ -279,6 +286,7 @@ The architecture will be a **simple monolith** consisting of a single FastAPI ba
 **Story 1.7: Super Admin User Management**
 
 -   **As a** Super Admin, **I want** to be able to view, manage the status of, and trigger password resets for user accounts within a specific university, **so that** I can perform essential administrative actions in an emergency.
+-   **Depends on:** Story 1.3, Story 1.5
 -   **Acceptance Criteria:**
     1.  The Super Admin dashboard must include a "University Management" section listing all active universities.
     2.  Selecting a university navigates to a detailed management page for that institution.
@@ -306,6 +314,7 @@ The architecture will be a **simple monolith** consisting of a single FastAPI ba
 **Story 2.1: Manual Academic Structure Management**
 
 -   **As an** Admin, **I want** a dedicated interface to manually create, view, update, and manage individual academic structure items, **so that** I can make granular additions or corrections without needing to perform a bulk import.
+-   **Depends on:** Story 1.5
 -   **Acceptance Criteria:**
     1.  The Admin dashboard contains a new "Academic Structure" management area.
     2.  Within this area, the Admin can perform full CRUD operations for **Departments, Programs, and Subjects.**
@@ -315,6 +324,7 @@ The architecture will be a **simple monolith** consisting of a single FastAPI ba
 **Story 2.2: Background Job Monitoring Dashboard**
 
 -   **As an** Admin, **I want** a centralized dashboard to view the status of all my background jobs (including data imports, report generation, and period cancellations), **so that** I can track progress and diagnose failures.
+-   **Depends on:** Story 1.6b, Story 2.3, Story 2.4, Story 2.5, Story 3.6, Story 5.6
 -   **Acceptance Criteria:**
     1.  A new "Job Monitor" page is added to the Admin dashboard.
     2.  The page provides a user-facing view of records from the `background_tasks` table that are associated with the Admin's university.
@@ -327,6 +337,7 @@ The architecture will be a **simple monolith** consisting of a single FastAPI ba
 **Story 2.3: Academic Structure Bulk Import**
 
 -   **As an** Admin, **I want** to bulk import the university's entire academic structure from a CSV file, **so that** I can rapidly set up the foundational hierarchy.
+-   **Depends on:** Story 2.1
 -   **Acceptance Criteria:**
     1.  The "Academic Structure" management area includes a "Bulk Import" feature.
     2.  A downloadable CSV template is provided.
@@ -339,6 +350,7 @@ The architecture will be a **simple monolith** consisting of a single FastAPI ba
 **Story 2.4: Historical User & Enrollment Bulk Import**
 
 -   **As an** Admin, **I want** to bulk import historical user and enrollment data from CSV files, **so that** past academic records are accurately reflected in the system.
+-   **Depends on:** Story 2.1
 -   **Acceptance Criteria & Notes:** Follows the same structure as Story 2.3 for importing users and enrollments.
 -   **Acceptance Criteria:**
     1.  (All criteria from 2.3 apply)
@@ -348,6 +360,7 @@ The architecture will be a **simple monolith** consisting of a single FastAPI ba
 **Story 2.5: Historical Evaluation Records Bulk Import**
 
 -   **As an** Admin, **I want** to bulk import past evaluation records (both numerical and open-ended) from a CSV file, **so that** historical feedback is available for analysis.
+-   **Depends on:** Story 2.1
 -   **Acceptance Criteria & Notes:** Follows the same structure as Story 2.3 for importing historical evaluations.
 -   **Acceptance Criteria:**
     1.  (All criteria from 2.3 apply)
@@ -357,6 +370,7 @@ The architecture will be a **simple monolith** consisting of a single FastAPI ba
 **Story 2.6: Fine-Tune Sentiment Analysis Model for Cebuano & Code-Switching**
 
 -   **As a** System/Data Scientist, **I want** the primary sentiment analysis model (XLM-RoBERTa) to be fine-tuned on Cebuano and code-switched language, **so that** its predictions are accurate and reliable.
+-   **Depends on:** Story 2.5
 -   **Acceptance Criteria:**
     1.  The fine-tuning script must be designed to consume a **pre-curated and labeled dataset** of evaluation records. The manual task of curating this dataset is a prerequisite.
     2.  The script can be executed via a CLI command.
@@ -367,6 +381,7 @@ The architecture will be a **simple monolith** consisting of a single FastAPI ba
 **Story 2.7: Stuck Job Intervention**
 
 -   **As an** Admin, **I want** to be able to 'Force Fail' a job that appears to be stuck in a 'Processing' state, **so that** I can resolve a system deadlock and investigate the issue.
+-   **Depends on:** Story 2.2
 -   **Dev Notes:**
     -   **Implementation Pattern:** The implementation should aim to create a generic, reusable pattern for the 'Force Fail' cleanup logic to avoid bespoke code for each job type.
     -   **Process Recommendation:** A technical spike is highly recommended for the riskiest parts of this feature (e.g., process termination and transaction rollbacks) to de-risk the main implementation.
@@ -386,6 +401,7 @@ UX Note: To improve the first-time user experience, the "Evaluation Management" 
 **Story 3.1: University Profile and Settings Management**
 
 -   **As an** Admin, **I want** a settings page to manage my university's profile and key operational parameters, **so that** I can control core business logic without needing technical support.
+-   **Depends on:** Story 1.5
 -   **Acceptance Criteria:**
     1.  An "Institution Settings" page is available in the Admin dashboard.
     2.  The page displays the university's core profile information (Name, Address) in a read-only format.
@@ -401,6 +417,7 @@ UX Note: To improve the first-time user experience, the "Evaluation Management" 
 **Story 3.2: Managing Form Criteria**
 
 -   **As an** Admin, **I want** to add, edit, and reorder weighted criteria within a draft form template, **so that** I can structure the evaluation into logical sections.
+-   **Depends on:** Story 3.1
 -   **Acceptance Criteria:**
     1.  When editing a form template with a 'draft' status, I can add new criteria (e.g., "Teaching Methods," "Classroom Management").
     2.  Each criterion must have a `name` and a numerical `weight`.
@@ -410,6 +427,7 @@ UX Note: To improve the first-time user experience, the "Evaluation Management" 
 **Story 3.3: Managing Form Questions**
 
 -   **As an** Admin, **I want** to add Likert-scale and open-ended questions to the criteria within a draft form template, **so that** I can capture detailed feedback.
+-   **Depends on:** Story 3.2
 -   **Acceptance Criteria:**
     1.  Within a specific criterion, I can add multiple Likert-scale questions.
     2.  I can add open-ended questions to the form.
@@ -421,6 +439,7 @@ UX Note: To improve the first-time user experience, the "Evaluation Management" 
 **Story 3.4a: Form Template Activation & Duplication**
 
 -   **As an** Admin, **I want** to activate, edit, and duplicate form templates, **so that** I can manage my forms efficiently.
+-   **Depends on:** Story 3.3
 -   **Acceptance Criteria:**
     1.  I can "Activate" a 'draft' template only if all validation rules are met (e.g., has name, criteria, questions, and weights sum to 100).
     2.  An **'active'** template remains **editable**. Editing an active form temporarily places it in an 'editing' state; if an edit is saved that causes the template to fail validation, its status must automatically revert to 'draft'.
@@ -431,6 +450,7 @@ UX Note: To improve the first-time user experience, the "Evaluation Management" 
 **Story 3.5: Assigning Forms to Evaluation Periods**
 
 -   **As an** Admin, **I want** to create and edit a scheduled evaluation period by assigning forms to evaluator groups, **so that** I can launch a clear and controlled evaluation.
+-   **Depends on:** Story 3.4a
 -   **Acceptance Criteria:**
     1.  On the "Evaluation Management" page, I can create or edit a Period Assignment. Any attempt to delete a dependent resource for an assigned period must be prevented.
     2.  The UI must gracefully handle cases where no 'active' forms are available by showing a helpful message and a link to the form creation page.
@@ -446,6 +466,7 @@ UX Note: To improve the first-time user experience, the "Evaluation Management" 
 **Story 3.6: Frontend - Initiate Soft Period Cancellation & Restoration**
 
 -   **As an** Admin, **I want** to initiate a "soft" period cancellation that is restorable for 72 hours, **so that** I can safely correct a critical error with a clear window for reversal.
+-   **Depends on:** Story 3.5
 -   **Acceptance Criteria:**
     1.  A 'Cancel Period' action button is visible and enabled on the "Form & Period Management" page for any evaluation period that has an 'Active' status.
     2.  Clicking the 'Cancel Period' action must open a confirmation dialog designed for destructive actions.
@@ -460,6 +481,7 @@ UX Note: To improve the first-time user experience, the "Evaluation Management" 
 **Story 3.7: Admin Management of Role-Specific Registration Codes**
 
 -   **As an** Admin, **I want** to create, view, and manage role-specific registration codes, including setting and updating their maximum usage limits, **so that** I can control the user onboarding process.
+-   **Depends on:** Story 1.5
 -   **Developer Notes:**
     -   **Implementation Pattern:** The implementation should aim to create a generic, reusable pattern for the 'Force Fail' cleanup logic to avoid bespoke code for each job type.
     -   **Process Recommendation:** A technical spike is highly recommended for the riskiest parts of this feature (e.g., race condition handling) to de-risk the main implementation.
@@ -477,6 +499,7 @@ UX Note: To improve the first-time user experience, the "Evaluation Management" 
 **Story 3.8: Backend - Process Soft Cancellation, Restoration, and Finalization**
 
 -   **As a** System, **I want** to process a soft period cancellation by changing its state, provide a mechanism for restoration, and have a scheduled job to finalize the cancellation after the grace period expires, **so that** the process is safe, reversible, and eventually consistent.
+-   **Depends on:** Story 3.6
 -   **Dev Notes & QA Notes:**
     -   **Idempotency:** The developer must implement idempotency for all state-changing operations and background jobs.
     -   **Testing:** QA must create automated integration tests for the entire lifecycle: soft cancel, restore within the window, and automated finalization after the window expires.
@@ -495,6 +518,7 @@ UX Note: To improve the first-time user experience, the "Evaluation Management" 
 **Story 3.9: Duplicate an Existing Period Assignment**
 
 -   **As an** Admin, **I want** to duplicate an existing evaluation period assignment, **so that** I can quickly schedule a new period using the same form configuration.
+-   **Depends on:** Story 3.5
 -   **Acceptance Criteria:**
     1.  An action to "Duplicate" is available for every entry in the list of Evaluation Periods.
     2.  Activating the "Duplicate" action navigates the user to the "Create Period Assignment" screen.
@@ -506,6 +530,7 @@ UX Note: To improve the first-time user experience, the "Evaluation Management" 
 **Story 3.10: Proactive Period Setup Notification**
 
 -   **As an** Admin, **I want** to be notified when an evaluation period ends and be prompted to set up the next one, **so that** I don't forget and can efficiently roll over the configuration.
+-   **Depends on:** Story 3.5
 -   **Acceptance Criteria:**
     1.  Within 24 hours of an evaluation period's `end_date_time` passing, a notification is created for all Admins of that university.
     2.  The notification clearly states which period has ended and suggests the next logical period to set up (e.g., Midterm -> Finals).
@@ -517,6 +542,7 @@ UX Note: To improve the first-time user experience, the "Evaluation Management" 
 **Story 4.1: Evaluation Submission**
 
 -   **As an** Evaluator (Student or Department Head), **I want** to select a faculty member and submit a complete evaluation during an active evaluation period, **so that** I can provide my feedback on their performance.
+-   **Depends on:** Story 3.5
 -   **Acceptance Criteria:**
     1.  **For a user with the 'Student' role:** My dashboard displays a list of faculty members based on the `subject_offerings` I am enrolled in for the current evaluation period.
     2.  **For a user with the 'Department Head' role:** My dashboard displays a list of all faculty members who are assigned to the department I lead.
@@ -531,6 +557,7 @@ UX Note: To improve the first-time user experience, the "Evaluation Management" 
 **Story 4.2: Pre-Submission Nudge for Low-Effort Ratings**
 
 -   **As an** Evaluator, **I want** to be gently prompted if all my numerical ratings are the same, **so that** I am encouraged to provide more thoughtful and specific feedback.
+-   **Depends on:** Story 4.1
 -   **Acceptance Criteria:**
     1.  On the evaluation form, before the "Submit" button is clicked, the system performs a client-side check on all provided Likert-scale scores.
     2.  If the variance of all scores is zero (i.e., they are all the same number), a temporary, dismissible 'toast' notification appears.
@@ -540,6 +567,7 @@ UX Note: To improve the first-time user experience, the "Evaluation Management" 
 **Story 4.3: Automated "Low-Confidence" Flagging**
 
 -   **As an** Admin, **I want** the system to automatically flag submissions that appear to be low-effort, **so that** I can review them for data quality.
+-   **Depends on:** Story 4.1
 -   **Acceptance Criteria:**
     1.  Immediately after a user submits an evaluation, a server-side check is performed.
     2.  A submission is flagged with a reason of "Low-Confidence" if it meets **both** of the following criteria: (A) the variance of all Likert-scale scores is zero, **AND** (B) the submission contains no meaningful qualitative feedback (i.e., all _optional_ open-ended questions were left blank).
@@ -548,6 +576,7 @@ UX Note: To improve the first-time user experience, the "Evaluation Management" 
 **Story 4.4: Asynchronous "Recycled Content" Flagging**
 
 -   **As an** Admin, **I want** the system to automatically detect and flag evaluations where an evaluator reuses their own text, **so that** I can ensure the originality of feedback.
+-   **Depends on:** Story 4.1
 -   **Acceptance Criteria:**
     1.  Upon a successful evaluation submission, a job is added to the asynchronous work queue.
     2.  The background job compares the submitted open-ended text against **that same evaluator's** previous submissions across all evaluation periods.
@@ -558,6 +587,7 @@ UX Note: To improve the first-time user experience, the "Evaluation Management" 
 **Story 4.5a: Flagged Evaluation Dashboard (View Only)**
 
 -   **As an** Admin, **I want** a dashboard to view a list of all flagged evaluations and see the detailed reasons for each flag, **so that** I can assess the queue and understand the issues.
+-   **Depends on:** Story 4.3, Story 4.4
 -   **Acceptance Criteria:**
     1.  The Admin dashboard includes a page that lists all evaluations with a 'pending' flag.
     2.  The list displays the faculty member, the reason(s) for the flag (e.g., "Low-Confidence"), and the submission date.
@@ -566,6 +596,7 @@ UX Note: To improve the first-time user experience, the "Evaluation Management" 
 **Story 4.5b: Flagged Evaluation Processing**
 
 -   **As an** Admin, while viewing a flagged evaluation, **I want** to be able to Approve, Archive, or Request Resubmission, **so that** I can process the queue and maintain data integrity.
+-   **Depends on:** Story 4.5a
 -   **Acceptance Criteria:**
     1.  From the detailed view, I have three actions: **Approve**, **Archive**, or **Request Resubmission**.
     2.  Choosing **"Approve"** resolves the flag and ensures the submission data is included in all aggregate calculations.
@@ -579,6 +610,7 @@ UX Note: To improve the first-time user experience, the "Evaluation Management" 
 **Story 4.6: Viewing Resolved Flags**
 
 -   **As an** Admin, **I want** to be able to view a history of evaluations that I have already resolved, **so that** I can maintain an audit trail and reference past decisions.
+-   **Depends on:** Story 4.5b
 -   **Acceptance Criteria:**
     1.  The flagged evaluations dashboard has a separate tab or filter to view 'Resolved' items.
     2.  The resolved list shows the submission details, the original flag reason, the action taken (Approved, Archived, etc.), who resolved it, and the date of resolution.
@@ -589,6 +621,7 @@ UX Note: To improve the first-time user experience, the "Evaluation Management" 
 **Story 5.1: Asynchronous Quantitative Analysis Job**
 
 -   **As a** System, **I want** to process the numerical Likert-scale answers from a submitted evaluation in a background job, **so that** the raw scores are calculated and stored for aggregation without blocking the user.
+-   **Depends on:** Story 4.1
 -   **Acceptance Criteria:**
     1.  When a new, valid evaluation submission is ready for processing, a job is added to the asynchronous work queue (Redis+RQ).
     2.  **Question-Level Analysis:** The job must calculate the **median** score for each individual Likert-scale question in the submission.
@@ -600,6 +633,7 @@ UX Note: To improve the first-time user experience, the "Evaluation Management" 
 **Story 5.2: Asynchronous Qualitative Analysis Job**
 
 -   **As a** System, **I want** to process the open-ended feedback from a submitted evaluation in a background job, **so that** qualitative insights like sentiment and key themes are extracted and stored for aggregation.
+-   **Depends on:** Story 4.1
 -   **Acceptance Criteria:**
     1.  When a new, valid evaluation submission is processed, a job is added to the asynchronous work queue (Redis+RQ) to handle its open-ended answers.
     2.  The job retrieves the text from the `evaluation_open_ended_answers` table for the given submission.
@@ -617,6 +651,7 @@ UX Note: To improve the first-time user experience, the "Evaluation Management" 
 **Story 5.3: Final Aggregation and Normalization Job**
 
 -   **As a** System, **I want** to run a final aggregation and normalization job, **so that** the individual quantitative and qualitative analysis results are combined into standardized, comparable scores for reporting and visualization.
+-   **Depends on:** Story 5.1, Story 5.2
 -   **Acceptance Criteria:**
     1.  The job is triggered after the prerequisite quantitative (5.1) and qualitative (5.2) analysis jobs for a submission or batch of submissions are successfully completed.
     2.  **Cohort Calculation:** The job must first calculate the cohort baseline statistics (**mean μ** and **standard deviation σ**) for the relevant comparison group (e.g., department-level) for both the `quant_score_raw` and `qual_score_raw` values.
@@ -629,6 +664,7 @@ UX Note: To improve the first-time user experience, the "Evaluation Management" 
 **Story 5.4: Initial Batch Processing of Historical Data**
 
 -   **As an** Admin, **I want** to trigger a one-time batch job to process all imported historical evaluation data using the newly built analysis pipeline, **so that** the system's dashboards are populated with a rich, longitudinal dataset.
+-   **Depends on:** Story 2.5, Story 5.1, Story 5.2, Story 5.3
 -   **Acceptance Criteria:**
     1.  The Admin dashboard provides an action to start the historical data processing job.
     2.  The job correctly identifies and queues all records imported via Epic 2 for processing.
@@ -639,6 +675,7 @@ UX Note: To improve the first-time user experience, the "Evaluation Management" 
 **Story 5.5: Dashboard Data Visualization**
 
 -   **As a** User (Faculty, Department Head, or Admin), **I want** to view the processed and aggregated evaluation results on my role-specific dashboard, **so that** I can gain clear, visual insights into performance.
+-   **Depends on:** Story 5.3, Story 5.4
 -   **Acceptance Criteria:**
     1.  The API must implement a **hybrid data retrieval strategy**: For finalized/locked evaluation periods, data is fetched from aggregate tables; for the current, provisional period, data is calculated on-the-fly and cached.
     2.  The main dashboard must display a **word cloud** of keywords, with a user action to switch between a "combined" view and separate views for **positive, neutral, and negative** keywords.
@@ -651,6 +688,7 @@ UX Note: To improve the first-time user experience, the "Evaluation Management" 
 **Story 5.6: Evaluation Report Generation and Export**
 
 -   **As a** User (Faculty, Department Head, or Admin), **I want** to use a "Report Center" to generate, track, and download comprehensive evaluation results, **so that** I can easily archive and analyze data offline.
+-   **Depends on:** Story 5.5
 -   **Acceptance Criteria:**
     1.  A "Report Center" link in the side navigation leads to a dedicated page with two main areas: "Generate Report" and "My Reports".
     2.  The "Generate Report" area allows a user to select a predefined report type and apply relevant filters.
@@ -666,6 +704,7 @@ UX Note: To improve the first-time user experience, the "Evaluation Management" 
 **Story 6.1: AI Assistant Page and Controls**
 
 -   **As a** Faculty or Department Head, **I want** to access a dedicated "AI Assistant" page with filters and pre-defined actions, **so that** I can easily set the context for generating performance suggestions.
+-   **Depends on:** Story 5.5
 -   **Acceptance Criteria:**
     1.  A new navigation link for the "AI Assistant" must be added to the main side panel, accessible **only** to users with 'Faculty' or 'Department Head' roles.
     2.  The page must include filter controls allowing the user to select the `school_term` and `assessment_period` for the data they wish to analyze.
@@ -678,6 +717,7 @@ UX Note: To improve the first-time user experience, the "Evaluation Management" 
 **Story 6.2: AI Suggestion Generation**
 
 -   **As a** Faculty or Department Head, **I want** to click a pre-defined action button and have the system generate relevant suggestions, **so that** I can receive AI-powered insights based on my selected data.
+-   **Depends on:** Story 6.1
 -   **Acceptance Criteria:**
     1.  When an action button is clicked, the frontend sends a request to a dedicated backend endpoint, including the selected filters (term, period, user/department mode).
     2.  The backend retrieves all necessary processed data for the given context, including records from `numerical_aggregates`, `sentiment_aggregates`, and the top 5 positive/negative `open_ended_keywords`.
@@ -689,6 +729,7 @@ UX Note: To improve the first-time user experience, the "Evaluation Management" 
 **Story 6.3: Saving and Viewing Suggestion History**
 
 -   **As a** Faculty or Department Head, **I want** to save generated suggestions and view a history of my past requests, **so that** I can track insights and progress over time.
+-   **Depends on:** Story 6.2
 -   **Acceptance Criteria:**
     1.  Once suggestions are displayed, a "Save to History" button becomes available.
     2.  Clicking "Save" sends the generated text and its context to the backend, creating a new record in the `ai_suggestions` table.
@@ -699,6 +740,7 @@ UX Note: To improve the first-time user experience, the "Evaluation Management" 
 **Story 6.4: Exporting AI Suggestions**
 
 -   **As a** Faculty or Department Head, **I want** to download my generated AI suggestions as a professional-looking document, **so that** I can easily share, print, or archive these insights for my records.
+-   **Depends on:** Story 6.2
 -   **Acceptance Criteria:**
     1.  When AI suggestions are displayed, a "Download as PDF" button is visible.
     2.  Clicking the button calls `POST /api/v1/ai/suggestions/{id}/export`, sending the rendered `content_markdown` plus a `context` payload that includes the suggestion title, generated timestamp, and any active filters (term, department, faculty, course, and assessment period).
@@ -713,6 +755,7 @@ UX Note: To improve the first-time user experience, the "Evaluation Management" 
 
 -   **As a** new User (Admin, Faculty, or Student), **I want** access to clear and simple help documentation, **so that** I can independently learn how to use the platform's key features without needing direct support.
 -   **Acceptance Criteria:**
+
     1.  A searchable help guide or FAQ section is accessible within the application.
     2.  The documentation covers core user flows for each major role.
     3.  The documentation is written in clear, non-technical language.
