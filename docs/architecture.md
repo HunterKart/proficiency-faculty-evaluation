@@ -12,6 +12,7 @@ N/A - This is a greenfield project. The architecture will be designed from scrat
 
 | Date           | Version | Description                                                                                                                                                                                                                                                        | Author                 |
 | :------------- | :------ | :----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | :--------------------- |
+| **2025-10-09** | **2.6** | **Incorporated PO feedback: Added Dependency Management Strategy, Deployment Prerequisites, and Asset Optimization Strategy sections.**                                                                                                                            | **Winston, Architect** |
 | 2025-10-09     | 2.5     | Added the complete `Error Handling Strategy` and `Monitoring and Observability` sections, aligning them with the established Tech Stack and project requirements.                                                                                                  | Architect              |
 | **2025-10-09** | **2.4** | Added comprehensive **`Coding Standards`** section (Groups 1-5), including full refinement for path alignment and integration of advanced best practices for frontend data-fetching (centralized query keys) and backend asynchronous patterns ("Surgical Async"). | Winston, Architect     |
 | **2025-10-09** | **2.3** | **Updated `Deployment Architecture` to include a dedicated staging deployment and E2E testing job in the `ci.yml` configuration. This implements the requirements from the `Testing Strategy`, making E2E tests the final gate before production.**                | **Winston, Architect** |
@@ -53,6 +54,13 @@ The **Proficiency** platform will be architected as a modern, decoupled web appl
 -   **Structure:** **Monorepo**
 -   **Monorepo Tool:** **npm/pnpm workspaces**. This lightweight approach is sufficient for managing the `web` and `api` packages without introducing unnecessary tooling complexity.
 -   **Package Organization:** The monorepo will contain an `apps/` directory for the main `web` (frontend) and `api` (backend) applications. A `packages/` directory will be included to house any shared code, such as common TypeScript types, in the future.
+
+#### **Dependency Management Strategy**
+
+To ensure stability and prevent dependency conflicts within the monorepo, the following strategies will be enforced:
+
+-   **Frontend (`pnpm` Workspaces):** The frontend leverages `pnpm` workspaces. All dependencies are defined in `frontend/package.json`, and the `pnpm-lock.yaml` file serves as the single source of truth for pinned versions. This file must be committed to the repository.
+-   **Backend (`pip` Constraints):** The backend uses a `requirements.txt` file for direct dependencies. A separate `constraints.txt` file will be used to pin the versions of all transitive dependencies, ensuring fully reproducible builds.
 
 ### **High Level Architecture Diagram**
 
@@ -7045,6 +7053,13 @@ In our Docker Compose setup, the Caddy server (`web` service) acts as a reverse 
 
 This section outlines the comprehensive strategy for deploying the **Proficiency** application to our production environment. It covers the specific methods for building and running both the frontend and backend services, the automated pipeline for continuous integration and deployment, and the definition of our application environments. The entire strategy is centered on our foundational architectural decision to use **Docker Compose** on a **single VPS**, ensuring a simple, manageable, and cost-effective deployment for Version 1.
 
+### **Deployment Prerequisites**
+
+Before a production deployment can occur, the following infrastructure prerequisites must be met:
+
+-   **Registered Domain Name:** A domain name (e.g., `proficiency-app.com`) must be registered and available.
+-   **DNS Management:** A plan for managing DNS records must be in place. At a minimum, this involves creating an **A record** pointing the domain and any subdomains (e.g., `app`, `staging`) to the static IP address of the production VPS.
+
 ---
 
 ### **Group 1: Deployment Strategy**
@@ -7298,6 +7313,11 @@ This section defines our client-side performance strategy, focusing on a fast in
 -   **Client-Side Caching Strategy**: We will leverage browser caching to minimize re-downloads for returning users.
     -   **Hashed Assets**: The Vite build process automatically generates filenames with content hashes (e.g., `main.[hash].js`). Our Caddy server **must** be configured to serve all hashed assets (JS, CSS, images) with an aggressive, long-term caching header: `Cache-Control: public, max-age=31536000, immutable`.
     -   **Entry Point**: The main `index.html` file **must** be served with a `Cache-Control: no-cache` header to ensure users always fetch the latest version of the application shell, which in turn will reference the latest hashed assets.
+
+-   **Asset Optimization Strategy**: To ensure a fast and efficient production build, the Vite build process will be configured for standard production optimizations. This includes:
+    -   **Tree-Shaking:** Automatically eliminates unused code from the final production bundles.
+    -   **Minification:** Minifies all JavaScript and CSS assets to reduce file size and improve network transfer times.
+    -   **Code-Splitting:** As detailed in the Loading Strategy, code is automatically split on a per-route basis.
 
 ### **2.2. Backend Performance**
 

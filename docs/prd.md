@@ -22,6 +22,7 @@ Existing faculty evaluation systems, particularly within the Philippines and at 
 
 | Date           | Version | Description                                                                                                                                                        | Author        |
 | :------------- | :------ | :----------------------------------------------------------------------------------------------------------------------------------------------------------------- | :------------ |
+| **2025-10-09** | **8.6** | **Added foundational technical stories (1.10, 1.11) for API middleware and frontend mocking to Epic 1, including dependency mapping.**                               | **John, PM**  |
 | **2025-10-09** | **8.5** | **Added Story 1.9 to track the critical task of provisioning and configuring external services.**                                                                  | **Sarah, PO** |
 | **2025-10-09** | **8.4** | **Added Story 7.1 for user-facing help documentation to ensure end-user support materials are created.**                                                           | **John, PM**  |
 | **2025-10-09** | **8.3** | **Aligned real-time functionality with architecture spec, adopting a hybrid WebSocket/polling model.**                                                             | **John, PM**  |
@@ -316,6 +317,28 @@ The architecture will be a **simple monolith** consisting of a single FastAPI ba
     3.  All necessary API keys and credentials have been acquired.
     4.  Credentials are to be securely documented and provided to the development team.
 -   **Dev Note:** This is a critical-path project management task, not a software development task. It blocks development on multiple features.
+
+**Story 1.10: Implement Core API Middleware**
+
+-   **Depends on:** Story 1.1, Story 1.2
+-   **Blocks:** Story 1.3, Story 1.6a, Story 1.7
+-   **As a** Developer, **I want** a set of shared API middleware to be implemented, **so that** all API requests have consistent logging, error handling, and database session management.
+-   **Acceptance Criteria:**
+    1.  A request logging middleware is created that logs key information (request ID, method, path, duration) in a structured JSON format.
+    2.  A global error handling middleware is created that catches unhandled exceptions and returns a standardized JSON error response, including a `requestId`.
+    3.  A middleware or dependency is created to manage the database session lifecycle per request.
+    4.  A middleware adds a unique `X-Request-ID` to every request and response for log tracing.
+
+**Story 1.11: Establish Frontend Mocking Infrastructure**
+
+-   **Depends on:** Story 1.1
+-   **Blocks:** Story 1.3, Story 1.4, Story 1.5, Story 1.6a
+-   **As a** Frontend Developer, **I want** a mock server infrastructure to be established, **so that** I can develop and test UI components without a dependency on the live backend API.
+-   **Acceptance Criteria:**
+    1.  `msw` (Mock Service Worker) is integrated into the frontend (`apps/web`) development environment.
+    2.  The mock server is enabled by default during local development (`pnpm dev`) and for all unit/integration tests (`vitest`).
+    3.  Initial mock handlers are created for core authentication and user profile endpoints.
+    4.  The frontend `README.md` is updated with instructions on how to create and manage mock handlers.
 
 #### **Epic 2: Historical Data Onboarding & System Priming**
 
