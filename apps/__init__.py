@@ -1,0 +1,2 @@
+"""Monorepo applications namespace."""
+
