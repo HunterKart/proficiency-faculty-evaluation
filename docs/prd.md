@@ -22,7 +22,7 @@ Existing faculty evaluation systems, particularly within the Philippines and at 
 
 | Date           | Version | Description                                                                                                                                                        | Author        |
 | :------------- | :------ | :----------------------------------------------------------------------------------------------------------------------------------------------------------------- | :------------ |
-| **2025-10-09** | **8.6** | **Added foundational technical stories (1.10, 1.11) for API middleware and frontend mocking to Epic 1, including dependency mapping.**                               | **John, PM**  |
+| **2025-10-09** | **8.6** | **Added foundational technical stories (1.10, 1.11) for API middleware and frontend mocking to Epic 1, including dependency mapping.**                             | **John, PM**  |
 | **2025-10-09** | **8.5** | **Added Story 1.9 to track the critical task of provisioning and configuring external services.**                                                                  | **Sarah, PO** |
 | **2025-10-09** | **8.4** | **Added Story 7.1 for user-facing help documentation to ensure end-user support materials are created.**                                                           | **John, PM**  |
 | **2025-10-09** | **8.3** | **Aligned real-time functionality with architecture spec, adopting a hybrid WebSocket/polling model.**                                                             | **John, PM**  |
