@@ -13,7 +13,7 @@ Proficiency is a full-stack platform for managing faculty evaluations. The repos
 ## Prerequisites
 
 - [pnpm](https://pnpm.io/) >= 9
-- [Python](https://www.python.org/) 3.13
+- [Python](https://www.python.org/) 3.12
 - [Docker](https://docs.docker.com/get-docker/) & Docker Compose
 
 ## Initial Setup

@@ -1,4 +1,4 @@
-FROM python:3.13-slim
+FROM python:3.12-slim
 
 WORKDIR /app
 
@@ -11,7 +11,7 @@ RUN apt-get update && \
       libffi-dev \
       libpango-1.0-0 \
       libpangocairo-1.0-0 \
-      libgdk-pixbuf2.0-0 \
+      libgdk-pixbuf-2.0-0 \
       libcairo2 \
       libjpeg-dev \
       zlib1g-dev && \

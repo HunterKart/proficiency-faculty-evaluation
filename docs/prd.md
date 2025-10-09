@@ -174,7 +174,7 @@ The architecture will be a **simple monolith** consisting of a single FastAPI ba
 
 #### **Additional Technical Assumptions**
 
--   **Technology Stack:** The core stack is defined as **React/TypeScript**, **Python/FastAPI**, and **MySQL/MariaDB**.
+-   **Technology Stack:** The core stack is defined as **React 19 / TypeScript 5.6**, **Python 3.12 with FastAPI 0.112**, and **MariaDB 11**.
 -   **API Style:** The API will be primarily synchronous to maintain simplicity, with asynchronous methods used only where a clear benefit exists.
 -   **Real-time Functionality:** The system will use a hybrid approach. Real-time updates for job monitoring and notifications will be implemented via WebSockets, while dashboard data refreshes will use frontend polling.
 -   **AI/ML Models:** All AI models will be run via **local inference**.
@@ -227,7 +227,7 @@ The architecture will be a **simple monolith** consisting of a single FastAPI ba
     1.  A database migration tool is integrated into the backend service.
     2.  An initial migration script is created that generates all necessary tables as defined/referenced in the `architecture.md` within the Data Model and Database Schema sections.
     3.  The migration can be successfully run via a command within the local Docker environment.
-    4.  A dedicated `Dockerfile` for the RQ worker is created, which installs all required Python libraries for the AI/ML models (XLM-ROBERTa, KeyBERT, Gemini API, etc.) to prevent slow builds in later epics.
+    4.  A dedicated `Dockerfile` for the RQ worker is created, which installs the pinned Python 3.12 AI/ML dependencies (`transformers` 4.44.x, `torch` 2.8.x, `scikit-learn` 1.5.x, `keybert` 0.8.x, `google-generativeai` 0.6.x, etc.) to prevent slow builds in later epics.
 
 **Story 1.3: Super Admin Authentication**
 
