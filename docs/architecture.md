@@ -683,7 +683,7 @@ This section defines the complete relational data schema for the application. Th
 
 **Group 3: Evaluation Configuration**:
 
-## **LikertScaleTemplate**
+### **LikertScaleTemplate**
 
 -   **Purpose**: A static, seeded table that defines the predefined Likert scales an Admin can choose from when creating a form.
 -   **Key Attributes**:
@@ -707,7 +707,7 @@ This section defines the complete relational data schema for the application. Th
 
 ---
 
-## **EvaluationFormTemplate**
+### **EvaluationFormTemplate**
 
 -   **Purpose**: The master template for an evaluation form, acting as a container for criteria and questions. It includes a version field to support optimistic locking.
 -   **Key Attributes**:
@@ -742,7 +742,7 @@ This section defines the complete relational data schema for the application. Th
 
 ---
 
-## **EvaluationCriterion**
+### **EvaluationCriterion**
 
 -   **Purpose**: Represents a weighted, thematic section within an `EvaluationFormTemplate`, such as "Teaching Methods".
 -   **Key Attributes**:
@@ -770,7 +770,7 @@ This section defines the complete relational data schema for the application. Th
 
 ---
 
-## **EvaluationQuestion**
+### **EvaluationQuestion**
 
 -   **Purpose**: Represents an individual question. It always belongs to a form and may optionally belong to a criterion within that form; either Likert-scale or open-ended question.
 -   **Key Attributes**:
@@ -805,7 +805,7 @@ This section defines the complete relational data schema for the application. Th
 
 ---
 
-## **EvaluationPeriod**
+### **EvaluationPeriod**
 
 -   **Purpose**: Defines the "live" evaluation window, linking specific form templates to an academic timeframe.
 -   **Key Attributes**:
@@ -7292,7 +7292,7 @@ This section details the implementation of our secure authentication and session
 
 ---
 
-## **Group 2: Holistic Performance Optimization**
+### **Group 2: Holistic Performance Optimization**
 
 This group establishes the performance budgets, service level objectives (SLOs), and specific technical strategies we will implement to ensure the Proficiency application is fast, responsive, and scalable. These patterns are designed to provide an excellent user experience while maintaining a cost-effective and manageable infrastructure.
 
