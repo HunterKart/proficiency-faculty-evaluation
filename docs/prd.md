@@ -22,6 +22,8 @@ Existing faculty evaluation systems, particularly within the Philippines and at 
 
 | Date           | Version | Description                                                                                                                                                        | Author       |
 | :------------- | :------ | :----------------------------------------------------------------------------------------------------------------------------------------------------------------- | :----------- |
+| **2025-10-09** | **8.4** | **Added Story 7.1 for user-facing help documentation to ensure end-user support materials are created.**                                                           | **John, PM** |
+| **2025-10-09** | **8.3** | **Aligned real-time functionality with architecture spec, adopting a hybrid WebSocket/polling model.**                                                             | **John, PM** |
 | **2025-10-09** | **8.2** | **Added NFR14 to formalize automated WCAG accessibility testing on every pull request, as defined in the final architecture.**                                     | **John, PM** |
 | **2025-10-08** | **8.1** | **Refined Story 3.1 to include an admin interface for managing new university-specific settings, aligning with the `UniversitySetting` data model.**               | **John, PM** |
 | **2025-10-08** | **8.0** | **Updated NFR2 and NFR11 to explicitly state that score weights and integrity thresholds are now configurable via the `UniversitySetting` model, not hard-coded.** | **John, PM** |
@@ -172,7 +174,7 @@ The architecture will be a **simple monolith** consisting of a single FastAPI ba
 
 -   **Technology Stack:** The core stack is defined as **React/TypeScript**, **Python/FastAPI**, and **MySQL/MariaDB**.
 -   **API Style:** The API will be primarily synchronous to maintain simplicity, with asynchronous methods used only where a clear benefit exists.
--   **Real-time Functionality:** Real-time updates will be implemented via **frontend polling**.
+-   **Real-time Functionality:** The system will use a hybrid approach. Real-time updates for job monitoring and notifications will be implemented via WebSockets, while dashboard data refreshes will use frontend polling.
 -   **AI/ML Models:** All AI models will be run via **local inference**.
 -   **Deployment Target:** The application will be deployed to a **single VPS (Ubuntu)**, with all services managed via **Docker Compose**.
 -   **Resource Management:** The Docker configuration must implement resource limits on the worker container to protect system stability.
@@ -195,6 +197,8 @@ The architecture will be a **simple monolith** consisting of a single FastAPI ba
     -   **Goal:** To implement the asynchronous data analysis pipeline and provide all user roles with intuitive, role-based dashboards featuring clear, comparable data visualizations of evaluation results.
 -   **Epic 6: AI-Powered Actionable Intelligence**
     -   **Goal:** To empower faculty and department heads with advanced, AI-generated suggestions and downloadable reports that translate evaluation data into actionable insights for professional development.
+-   **Epic 7: Support & Documentation**
+    -   **Goal:** To provide users with the necessary resources to understand and independently use the platform.
 
 ---
 
@@ -703,12 +707,12 @@ UX Note: To improve the first-time user experience, the "Evaluation Management" 
     5.  Each export request is rate limited to 5 attempts per user per 15 minutes to protect the shared WeasyPrint worker pool and match the AI run throttles.
     6.  Successful exports append an `AI_SUGGESTION_EXPORTED` entry to the audit log, linking to the originating suggestion so history views show the export trail.
 
----
+#### **Epic 7: Support & Documentation**
 
-### **Next Steps**
+**Story 7.1: User-Facing Help Documentation**
 
-This document (Version 6.3) provides the complete and aligned requirements for the "Proficiency" application.
-
--   **For the Architect (`*agent architect`):** Please use this PRD as the primary input to create the `fullstack-architecture.md` document.
-
--   **For the Product Owner (`*agent po`):** Please use the `po-master-checklist` to perform a final validation of this document for completeness and consistency before the Architect begins their work.
+-   **As a** new User (Admin, Faculty, or Student), **I want** access to clear and simple help documentation, **so that** I can independently learn how to use the platform's key features without needing direct support.
+-   **Acceptance Criteria:**
+    1.  A searchable help guide or FAQ section is accessible within the application.
+    2.  The documentation covers core user flows for each major role.
+    3.  The documentation is written in clear, non-technical language.
