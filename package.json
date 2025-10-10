@@ -5,6 +5,7 @@
   "packageManager": "pnpm@9.11.0",
   "scripts": {
     "lint": "echo \"lint placeholder\"",
-    "test": "echo \"test placeholder\""
+    "test": "echo \"test placeholder\"",
+    "db:migrate": "docker compose run --rm api alembic upgrade head"
   }
 }

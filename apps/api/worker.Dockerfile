@@ -18,7 +18,13 @@ RUN apt-get update && \
     rm -rf /var/lib/apt/lists/*
 
 COPY requirements.txt .
-RUN pip install --no-cache-dir -r requirements.txt
+RUN pip install --no-cache-dir -r requirements.txt && \
+    pip install --no-cache-dir \
+      transformers==4.44.2 \
+      torch==2.8.0 \
+      keybert==0.8.4 \
+      google-generativeai==0.6.0 \
+      scikit-learn==1.5.2
 
 COPY src ./src
 
