@@ -225,7 +225,7 @@ The architecture will be a **simple monolith** consisting of a single FastAPI ba
 -   **Depends on:** Story 1.1
 -   **Acceptance Criteria:**
     1.  A database migration tool is integrated into the backend service.
-    2.  An initial migration script is created that generates all necessary tables as defined/referenced in the `architecture.md` within the Data Model and Database Schema sections.
+    2.  An initial migration script is created that generates all necessary tables as defined/referenced in the `architecture.md` within the Data Model (`docs/architecture/04-data-models.md`) and Database Schema (`docs/architecture/09-database-schema.md`) sections.
     3.  The migration can be successfully run via a command within the local Docker environment.
     4.  A dedicated `Dockerfile` for the RQ worker is created, which installs the pinned Python 3.12 AI/ML dependencies (`transformers` 4.44.x, `torch` 2.8.x, `scikit-learn` 1.5.x, `keybert` 0.8.x, `google-generativeai` 0.6.x, etc.) to prevent slow builds in later epics.
 
