@@ -38,6 +38,6 @@
 | **CI/CD**                | GitHub Actions              | N/A        | Automates linting, testing, and deployment workflows.                | Tightly integrated with GitHub, providing a straightforward path to CI/CD.                   |
 | **Monitoring**           | Prometheus + Grafana        | latest     | Collects metrics and provides dashboards for system health.          | A powerful, open-source standard for monitoring containerized applications.                  |
 | **Logging**              | Python Logging Module       | native     | Handles structured logging for the API and worker.                   | A built-in, configurable, and robust solution for application logging.                       |
-| **CSS Framework**        | Tailwind CSS                | 3.4.x      | A utility-first CSS framework for styling the frontend.              | Enables rapid, consistent UI development and is a core part of `shadcn/ui`.                  |
+| **CSS Framework**        | Tailwind CSS                | 4.0.x      | A utility-first CSS framework delivered through the CSS-first `@theme` workflow. | Enables rapid, consistent UI development and is a core part of `shadcn/ui`; configuration lives in CSS via `@import "tailwindcss"` and optional `@theme` tokens. |
 
 ***

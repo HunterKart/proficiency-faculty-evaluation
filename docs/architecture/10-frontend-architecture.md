@@ -116,6 +116,16 @@ export default FormCanvas;
 * **Accessibility (`aria-*`)**: Include appropriate ARIA attributes to ensure the application is accessible to users with disabilities, as demonstrated with `aria-label` in the example.
 * **Separation of Concerns:** Keep components focused on presentation. Complex business logic, state management, and API calls should be handled by custom hooks or the services layer (to be defined in later groups), not directly within UI components.
 
+#### Tailwind CSS v4 Configuration
+
+Tailwind CSS is delivered through the CSS-first workflow introduced in v4. The global stylesheet `apps/web/src/index.css` must:
+
+* `@import "tailwindcss";` as the first statement so the framework utilities are available.
+* Declare project design tokens with the `@theme` directive (colors, spacing, typography) instead of editing a `tailwind.config.js` file. Tailwind Labs highlights this workflow in the v4.0 release notes (context7: Tailwind CSS v4 – “Define Tailwind CSS configuration directly in CSS with @theme”).
+* Define any project-specific utilities with the new `@utility` directive when the standard primitives are insufficient.
+
+Legacy files such as `tailwind.config.js` or `postcss.config.js` must not be added unless Tailwind Labs reintroduces them; customization lives entirely in CSS under this approach.
+
 ***
 
 ### **Group 2: State Management Architecture**

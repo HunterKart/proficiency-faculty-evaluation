@@ -6593,18 +6593,18 @@ apps/web/
 │   └── main.tsx
 ├── index.html
 ├── package.json
-├── postcss.config.js
-├── tailwind.config.js
 ├── tsconfig.json
 └── vite.config.ts
 ```
 
 **Breakdown of Frontend Structure:**
 
+-   **`src/index.css`**: Imports Tailwind CSS and defines design tokens via the v4 `@theme` workflow. This replaces the legacy `tailwind.config.js`/`postcss.config.js` setup; store all global styling primitives here.
 -   **`src/components/`**: This is the core of the UI library, organized using the hybrid Atomic Design methodology previously defined. It is divided into `/ui` (primitives from `shadcn/ui`), `/layouts` (page structures), `/shared` (custom reusable components), and `/features` (domain-specific components).
 -   **`src/pages/`**: Contains the top-level components for each route, which are lazy-loaded by the router for performance.
 -   **`src/routes/`**: Centralizes all client-side routing logic using **React Router**, including the `RouteGuard` for authentication and authorization.
 -   **`src/services/` & `src/hooks/`**: This is the dedicated data-fetching layer. The `services` directory contains functions for making API calls, while the `hooks` directory wraps this logic with **TanStack Query** for caching, refetching, and managing server state.
+-   **Tailwind Configuration**: Tailwind CSS v4 no longer relies on separate config files. Add new tokens/utilities using the `@theme` and `@utility` directives within `src/index.css`; do not reintroduce `tailwind.config.js` or `postcss.config.js`.
 
 ---
 
@@ -6782,8 +6782,6 @@ prof-evaluation-app/
 │       │   └── main.tsx
 │       ├── index.html
 │       ├── package.json
-│       ├── postcss.config.js
-│       ├── tailwind.config.js
 │       ├── tsconfig.json
 │       └── vite.config.ts
 ├── docs/                    # Group 5: Project Documentation
@@ -7898,7 +7896,8 @@ These standards ensure our React and TypeScript codebase is clean, consistent, a
 -   **Utility-First:** Components **must** be styled primarily using **Tailwind CSS** utility classes directly in the JSX. This is our standard for applying styles.
 -   **Component-Specific CSS:** For complex, state-dependent, or reusable style patterns that are difficult to manage with inline utilities, a co-located `.css` or `.module.css` file can be used, leveraging Tailwind's `@apply` directive. This should be the exception, not the rule.
 -   **`clsx` for Conditional Classes:** The `clsx` utility **must** be used to conditionally apply classes to elements, ensuring a clean and readable approach to dynamic styling.
--   **Design Tokens:** All colors, fonts, and spacing **must** be defined as design tokens in `tailwind.config.ts`.
+-   **Design Tokens:** All colors, fonts, and spacing **must** be defined in `apps/web/src/index.css` using Tailwind v4's `@theme` directive rather than a standalone config file.
+-   **Custom Utilities:** When bespoke utilities are required, add them via the `@utility` directive inside `index.css`; do not create legacy `@layer` blocks or reintroduce `tailwind.config.js`/`postcss.config.js`.
 
 #### **3.4. Frontend Testing Rules**
 

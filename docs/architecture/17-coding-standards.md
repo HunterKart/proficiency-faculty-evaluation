@@ -76,7 +76,8 @@ These standards ensure our React and TypeScript codebase is clean, consistent, a
 * **Utility-First:** Components **must** be styled primarily using **Tailwind CSS** utility classes directly in the JSX. This is our standard for applying styles.
 * **Component-Specific CSS:** For complex, state-dependent, or reusable style patterns that are difficult to manage with inline utilities, a co-located `.css` or `.module.css` file can be used, leveraging Tailwind's `@apply` directive. This should be the exception, not the rule.
 * **`clsx` for Conditional Classes:** The `clsx` utility **must** be used to conditionally apply classes to elements, ensuring a clean and readable approach to dynamic styling.
-* **Design Tokens:** All colors, fonts, and spacing **must** be defined as design tokens in `tailwind.config.ts`.
+* **Design Tokens:** All colors, fonts, and spacing **must** be defined in `apps/web/src/index.css` using Tailwind v4's `@theme` directive rather than a standalone `tailwind.config.js`.
+* **Custom Utilities:** When bespoke utilities are required, add them via the `@utility` directive inside `index.css`; do not create legacy `@layer` blocks or reintroduce `tailwind.config.js`/`postcss.config.js`.
 
 #### **3.4. Frontend Testing Rules**
 

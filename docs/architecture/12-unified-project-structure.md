@@ -82,18 +82,18 @@ apps/web/
 │   └── main.tsx
 ├── index.html
 ├── package.json
-├── postcss.config.js
-├── tailwind.config.js
 ├── tsconfig.json
 └── vite.config.ts
 ```
 
 **Breakdown of Frontend Structure:**
 
+* **`src/index.css`**: Imports Tailwind CSS and defines design tokens using the v4 CSS-first `@theme` workflow. This file replaces the legacy `tailwind.config.js` and `postcss.config.js` setup; all global styling primitives live here.
 * **`src/components/`**: This is the core of the UI library, organized using the hybrid Atomic Design methodology previously defined. It is divided into `/ui` (primitives from `shadcn/ui`), `/layouts` (page structures), `/shared` (custom reusable components), and `/features` (domain-specific components).
 * **`src/pages/`**: Contains the top-level components for each route, which are lazy-loaded by the router for performance.
 * **`src/routes/`**: Centralizes all client-side routing logic using **React Router**, including the `RouteGuard` for authentication and authorization.
 * **`src/services/` & `src/hooks/`**: This is the dedicated data-fetching layer. The `services` directory contains functions for making API calls, while the `hooks` directory wraps this logic with **TanStack Query** for caching, refetching, and managing server state.
+* **Tailwind Configuration**: Tailwind CSS v4 no longer relies on `tailwind.config.js` or `postcss.config.js`. Do not add those files; instead, declare tokens and additional utilities inside `src/index.css` using the `@theme` and `@utility` directives provided by Tailwind v4 (see Tailwind Labs, “Tailwind CSS v4.0” update).
 
 ***
 
@@ -271,8 +271,6 @@ prof-evaluation-app/
 │       │   └── main.tsx
 │       ├── index.html
 │       ├── package.json
-│       ├── postcss.config.js
-│       ├── tailwind.config.js
 │       ├── tsconfig.json
 │       └── vite.config.ts
 ├── docs/                    # Group 5: Project Documentation
