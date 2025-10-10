@@ -16,6 +16,7 @@ from sqlalchemy import (
     Text,
     UniqueConstraint,
 )
+from sqlalchemy.ext.associationproxy import AssociationProxy, association_proxy
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from ..db import Base
@@ -168,15 +169,15 @@ class Role(Base):
     id: Mapped[int] = mapped_column(Integer, primary_key=True)
     name: Mapped[str] = mapped_column(String(50), nullable=False, unique=True)
 
-    users: Mapped[List["User"]] = relationship(
-        "User",
-        secondary="user_roles",
-        back_populates="roles",
-    )
     user_roles: Mapped[List["UserRole"]] = relationship(
         "UserRole",
         back_populates="role",
         cascade="all, delete-orphan",
+    )
+    users: AssociationProxy = association_proxy(
+        "user_roles",
+        "user",
+        creator=lambda user: UserRole(user=user),
     )
     registration_codes: Mapped[List["RegistrationCode"]] = relationship(
         back_populates="role",
@@ -269,15 +270,15 @@ class User(TimestampMixin, Base):
         back_populates="students",
     )
     registration_code: Mapped[Optional["RegistrationCode"]] = relationship(back_populates="users")
-    roles: Mapped[List["Role"]] = relationship(
-        "Role",
-        secondary="user_roles",
-        back_populates="users",
-    )
     user_roles: Mapped[List["UserRole"]] = relationship(
         "UserRole",
         back_populates="user",
         cascade="all, delete-orphan",
+    )
+    roles: AssociationProxy = association_proxy(
+        "user_roles",
+        "role",
+        creator=lambda role: UserRole(role=role),
     )
     faculty_affiliations: Mapped[List["FacultyDepartmentAffiliation"]] = relationship(
         "FacultyDepartmentAffiliation",
